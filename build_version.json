@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.07.16",
-  "generatedAt": "2025-09-07T19:00:06Z",
-  "notes": "Spill: redusert glow (text-shadow) for bedre lesbarhet"
+  "build": "2025.09.07.17",
+  "generatedAt": "2025-09-07T19:04:03Z",
+  "notes": "Spill: hi-score topp 10 med navn/score, dummy seed og innskriving"
 }
 
 

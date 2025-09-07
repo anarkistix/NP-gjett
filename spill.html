@@ -37,6 +37,15 @@
       .endBox { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:18px 22px; width:min(420px, 88vw); text-align:center; box-shadow:0 0 12px rgba(0,0,0,0.5); }
       .endBox h2 { margin:0 0 8px 0; font: bold 22px monospace; letter-spacing:1px; text-shadow:0 0 3px #00ff88; }
       .endScore { margin:6px 0 14px; font: bold 18px monospace; }
+      .hsTitle { margin:10px 0 6px; font: bold 16px monospace; letter-spacing:1px; text-shadow:0 0 3px #00ff88; }
+      .hsList { border:1px solid #00ff88; border-radius:8px; padding:8px; text-align:left; max-height:40vh; overflow:auto; }
+      .hsRow { display:flex; justify-content:space-between; gap:10px; padding:4px 2px; font: 13px monospace; }
+      .hsRow + .hsRow { border-top:1px dashed rgba(0,255,136,0.25); }
+      .hsIdx { width:22px; opacity:0.9; }
+      .hsName { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .hsScore { width:70px; text-align:right; }
+      .hsEntry { display:none; margin-top:10px; }
+      .hsEntry input { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:6px; padding:8px 10px; font: bold 13px monospace; letter-spacing:1px; margin-right:8px; width:60%; }
       #splashOverlay { position:absolute; inset:0; z-index:1200; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); }
       .splashBox { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:18px 20px; width:min(520px, 90vw); box-shadow:0 0 12px rgba(0,0,0,0.5); }
       .splashTitle { font: bold 20px monospace; letter-spacing:1px; text-shadow:0 0 3px #00ff88; text-align:center; margin-bottom:10px; }
@@ -61,6 +70,12 @@
       <div class="endBox">
         <h2>Tiden er ute!</h2>
         <div class="endScore">Din score: <span id="endScoreVal">00000</span></div>
+        <div class="hsTitle">Hi-score</div>
+        <div id="hsList" class="hsList"></div>
+        <div class="hsEntry" id="hsEntry">
+          <input id="hsName" type="text" placeholder="Ditt navn" maxlength="24" />
+          <button id="hsSave" class="choiceBtn">Lagre</button>
+        </div>
         <div style="display:flex; justify-content:center; gap:10px;">
           <button id="endRestart" class="choiceBtn">START NYTT SPILL</button>
         </div>
@@ -102,6 +117,10 @@
         const endOverlay = document.getElementById('endOverlay');
         const endScoreVal = document.getElementById('endScoreVal');
         const endRestartBtn = document.getElementById('endRestart');
+        const hsListEl = document.getElementById('hsList');
+        const hsEntryEl = document.getElementById('hsEntry');
+        const hsNameEl = document.getElementById('hsName');
+        const hsSaveBtn = document.getElementById('hsSave');
         const splashOverlay = document.getElementById('splashOverlay');
         const startGameBtn = document.getElementById('startGameBtn');
 
@@ -138,7 +157,55 @@
         }
         function startCountdown(totalMs){ stopCountdown(); countdownEndAtMs = Date.now() + totalMs; updateCountdown(); countdownHandle = setInterval(updateCountdown, 250); }
         function stopCountdown(){ if (countdownHandle) { clearInterval(countdownHandle); countdownHandle = null; } }
-        function endGame(){ if (gameOver) return; gameOver = true; if (endScoreVal) endScoreVal.textContent = String(Math.max(0, Math.floor(score))).padStart(5,'0'); if (endOverlay) endOverlay.style.display = 'flex'; }
+        function endGame(){
+          if (gameOver) return; gameOver = true;
+          const sc = Math.max(0, Math.floor(score));
+          if (endScoreVal) endScoreVal.textContent = String(sc).padStart(5,'0');
+          seedHighscores();
+          renderHighscores();
+          // Vurder innskriving
+          const canEnter = qualifiesForHighscore(sc);
+          if (hsEntryEl) hsEntryEl.style.display = canEnter ? 'block' : 'none';
+          if (endOverlay) endOverlay.style.display = 'flex';
+          if (canEnter && hsNameEl) { hsNameEl.value=''; setTimeout(()=>hsNameEl.focus(), 50); }
+        }
+
+        // Highscores
+        const HS_KEY = 'np_gjett_highscores_v1';
+        function loadHighscores(){
+          try { const arr = JSON.parse(localStorage.getItem(HS_KEY)||'[]'); if (Array.isArray(arr)) return arr; } catch {}
+          return [];
+        }
+        function saveHighscores(list){
+          try { localStorage.setItem(HS_KEY, JSON.stringify(list)); } catch {}
+        }
+        function seedHighscores(){
+          let hs = loadHighscores();
+          if (hs.length) return;
+          const names = ['Glitre','Fjellrev','Nordlys','Isbre','Furu','Elg','Hauk','Aurora','Bølge','Gran'];
+          const scores = [120,110,100,95,90,80,70,60,50,40];
+          hs = names.map((n,i)=>({ name:n, score:scores[i]||40 }));
+          saveHighscores(hs);
+        }
+        function renderHighscores(){
+          const hs = loadHighscores().slice(0,10);
+          const html = hs.map((r,i)=>`<div class="hsRow"><div class="hsIdx">${String(i+1).padStart(2,'0')}</div><div class="hsName">${(r.name||'–').toString().slice(0,24)}</div><div class="hsScore">${String(r.score).padStart(5,'0')}</div></div>`).join('');
+          if (hsListEl) hsListEl.innerHTML = html;
+        }
+        function qualifiesForHighscore(sc){
+          const hs = loadHighscores();
+          if (hs.length < 10) return true;
+          const min = hs[hs.length-1] && Number(hs[hs.length-1].score)||0;
+          return sc > min;
+        }
+        function addHighscore(name, sc){
+          const hs = loadHighscores();
+          hs.push({ name: (name||'Uten navn').toString().trim().slice(0,24) || 'Uten navn', score: Number(sc)||0 });
+          hs.sort((a,b)=> (b.score - a.score) || a.name.localeCompare(b.name,'no'));
+          const top = hs.slice(0,10);
+          saveHighscores(top);
+          renderHighscores();
+        }
 
         norwayLayer.addData(outline);
         try { map.fitBounds(norwayLayer.getBounds().pad(0.05)); } catch { map.setView([64.5, 16], 4); }
@@ -336,6 +403,12 @@
         if (endRestartBtn) endRestartBtn.addEventListener('click', ()=>{
           if (endOverlay) endOverlay.style.display = 'none';
           showSplash();
+        });
+        if (hsSaveBtn) hsSaveBtn.addEventListener('click', ()=>{
+          const sc = Math.max(0, Math.floor(score));
+          const name = (hsNameEl && hsNameEl.value) || '';
+          addHighscore(name, sc);
+          if (hsEntryEl) hsEntryEl.style.display = 'none';
         });
         showSplash();
       })().catch(e => {
