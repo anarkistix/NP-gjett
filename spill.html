@@ -37,15 +37,7 @@
       .endBox { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:18px 22px; width:min(420px, 88vw); text-align:center; box-shadow:0 0 12px rgba(0,0,0,0.5); }
       .endBox h2 { margin:0 0 8px 0; font: bold 22px monospace; letter-spacing:1px; text-shadow:0 0 3px #00ff88; }
       .endScore { margin:6px 0 14px; font: bold 18px monospace; }
-      .hsTitle { margin:10px 0 6px; font: bold 16px monospace; letter-spacing:1px; text-shadow:0 0 3px #00ff88; }
-      .hsList { border:1px solid #00ff88; border-radius:8px; padding:8px; text-align:left; max-height:40vh; overflow:auto; }
-      .hsRow { display:flex; justify-content:space-between; gap:10px; padding:4px 2px; font: 13px monospace; }
-      .hsRow + .hsRow { border-top:1px dashed rgba(0,255,136,0.25); }
-      .hsIdx { width:22px; opacity:0.9; }
-      .hsName { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-      .hsScore { width:70px; text-align:right; }
-      .hsEntry { display:none; margin-top:10px; }
-      .hsEntry input { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:6px; padding:8px 10px; font: bold 13px monospace; letter-spacing:1px; margin-right:8px; width:60%; }
+      /* hi-score stil fjernet */
       #splashOverlay { position:absolute; inset:0; z-index:1200; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); }
       .splashBox { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:18px 20px; width:min(520px, 90vw); box-shadow:0 0 12px rgba(0,0,0,0.5); }
       .splashTitle { font: bold 20px monospace; letter-spacing:1px; text-shadow:0 0 3px #00ff88; text-align:center; margin-bottom:10px; }
@@ -90,8 +82,7 @@
           <li>Du får et nytt hint om parken for hvert forsøk du bruker.</li>
           <li>Når du har gjettet riktig går vi videre til neste park.</li>
         </ul>
-        <div class="hsTitle">Hi-score</div>
-        <div id="hsListSplash" class="hsList" style="margin-bottom:10px;"></div>
+        
         <div style="display:flex; justify-content:center;">
           <button id="startGameBtn" class="choiceBtn">START NYTT SPILL</button>
         </div>

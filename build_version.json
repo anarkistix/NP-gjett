@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.07.20",
-  "generatedAt": "2025-09-07T20:37:08Z",
-  "notes": "Spill: fjernet hi-score funksjonalitet (klient og server)"
+  "build": "2025.09.07.21",
+  "generatedAt": "2025-09-07T20:40:06Z",
+  "notes": "Spill: fjernet hi-score grafikk fra splash screen"
 }
 
 
