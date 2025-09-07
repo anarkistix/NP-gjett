@@ -119,11 +119,7 @@
         const endOverlay = document.getElementById('endOverlay');
         const endScoreVal = document.getElementById('endScoreVal');
         const endRestartBtn = document.getElementById('endRestart');
-        const hsListEl = document.getElementById('hsList');
-        const hsEntryEl = document.getElementById('hsEntry');
-        const hsNameEl = document.getElementById('hsName');
-        const hsSaveBtn = document.getElementById('hsSave');
-        const hsListSplashEl = document.getElementById('hsListSplash');
+        /* hi-score elementer fjernet */
         const splashOverlay = document.getElementById('splashOverlay');
         const startGameBtn = document.getElementById('startGameBtn');
 
@@ -166,36 +162,11 @@
           const sc = Math.max(0, Math.floor(score));
           lastFinalScore = sc; highscoreSaved = false;
           if (endScoreVal) endScoreVal.textContent = String(sc).padStart(5,'0');
-          await seedHighscores();
-          await renderHighscores();
-          // Vurder innskriving
-          const canEnter = await qualifiesForHighscore(sc);
-          if (hsEntryEl) hsEntryEl.style.display = canEnter ? 'block' : 'none';
           if (endOverlay) endOverlay.style.display = 'flex';
-          if (canEnter && hsNameEl) { hsNameEl.value=''; setTimeout(()=>hsNameEl.focus(), 50); }
         }
 
         // Highscores
-        async function fetchHighscores(){
-          try { const r = await fetch('http://127.0.0.1:8777/highscores'); if (!r.ok) throw 0; const j = await r.json(); return Array.isArray(j.list)? j.list: []; } catch { return []; }
-        }
-        async function postHighscore(name, sc){
-          try { await fetch('http://127.0.0.1:8777/highscores', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name, score: sc }) }); } catch {}
-        }
-        async function seedHighscores(){ await fetchHighscores(); }
-        async function renderHighscores(targetEl){
-          const hs = (await fetchHighscores()).slice(0,10);
-          const html = hs.map((r,i)=>`<div class="hsRow"><div class="hsIdx">${String(i+1).padStart(2,'0')}</div><div class="hsName">${(r.name||'–').toString().slice(0,24)}</div><div class="hsScore">${String(r.score).padStart(5,'0')}</div></div>`).join('');
-          const el = targetEl || hsListEl;
-          if (el) el.innerHTML = html;
-        }
-        async function qualifiesForHighscore(sc){
-          const hs = await fetchHighscores();
-          if (hs.length < 10) return true;
-          const min = hs[hs.length-1] && Number(hs[hs.length-1].score)||0;
-          return sc > min;
-        }
-        async function addHighscore(name, sc){ await postHighscore((name||'Uten navn').toString().trim().slice(0,24)||'Uten navn', Number(sc)||0); await renderHighscores(); }
+        /* hi-score fjernet */
 
         norwayLayer.addData(outline);
         try { map.fitBounds(norwayLayer.getBounds().pad(0.05)); } catch { map.setView([64.5, 16], 4); }
@@ -382,7 +353,7 @@
         });
 
         // Splash ved oppstart
-        function showSplash(){ if (splashOverlay) splashOverlay.style.display = 'flex'; seedHighscores(); renderHighscores(hsListSplashEl); }
+        function showSplash(){ if (splashOverlay) splashOverlay.style.display = 'flex'; }
         if (startGameBtn) startGameBtn.addEventListener('click', ()=>{
           if (splashOverlay) splashOverlay.style.display = 'none';
           if (endOverlay) endOverlay.style.display = 'none';
@@ -390,24 +361,9 @@
           startCountdown(120000);
           startRound();
         });
-        if (endRestartBtn) endRestartBtn.addEventListener('click', async ()=>{
-          // Autosave hvis kvalifiserer og ikke allerede lagret
-          const sc = Math.max(0, Math.floor(score));
-          if ((await qualifiesForHighscore(sc)) && !highscoreSaved){
-            const name = (hsNameEl && hsNameEl.value) || '';
-            await addHighscore(name, sc);
-            highscoreSaved = true;
-            if (hsEntryEl) hsEntryEl.style.display = 'none';
-          }
+        if (endRestartBtn) endRestartBtn.addEventListener('click', ()=>{
           if (endOverlay) endOverlay.style.display = 'none';
           showSplash();
-        });
-        if (hsSaveBtn) hsSaveBtn.addEventListener('click', async ()=>{
-          const sc = Math.max(0, Math.floor(score));
-          const name = (hsNameEl && hsNameEl.value) || '';
-          await addHighscore(name, sc);
-          highscoreSaved = true;
-          if (hsEntryEl) hsEntryEl.style.display = 'none';
         });
         showSplash();
       })().catch(e => {
