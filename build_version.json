@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.07.10",
-  "generatedAt": "2025-09-07T18:11:52Z",
-  "notes": "Spill: vis kun norsk parknavn (før eventuelt skråstrek)"
+  "build": "2025.09.07.11",
+  "generatedAt": "2025-09-07T18:13:59Z",
+  "notes": "Spill: feil-knapper holder rød neon-stil; KORREKT viser navn"
 }
 
 

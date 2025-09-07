@@ -23,12 +23,14 @@
       .choiceBtn:active { transform: scale(0.98); }
       .choiceBtn.correct { background:#111; border-color:#00ff88; color:#00ff88; text-shadow:0 0 6px #00ff88; }
       .choiceBtn.wrong { background:#111; border-color:#ff6b6b; color:#ff6b6b; text-shadow:0 0 4px #ff6b6b; }
-      .choiceBtn:disabled, .choiceBtn.disabled { background:#e9e9e9; color:#9a9a9a; border-color:#c8c8c8; text-shadow:none; }
+      .choiceBtn:disabled:not(.wrong):not(.correct), .choiceBtn.disabled:not(.wrong):not(.correct) { background:#e9e9e9; color:#9a9a9a; border-color:#c8c8c8; text-shadow:none; }
+      .choiceBtn.wrong:disabled, .choiceBtn.wrong.disabled { background:#111; border-color:#ff6b6b; color:#ff6b6b; text-shadow:0 0 4px #ff6b6b; }
       #winOverlay { position:absolute; inset:0; z-index:1000; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.5); }
       .winContent { background:#111; border:2px solid #00ff88; border-radius:10px; padding:20px 24px; text-align:center; color:#00ff88; font: bold 28px monospace; letter-spacing:2px; text-shadow:0 0 6px #00ff88; }
       .winContent .btn { margin-top:12px; font-size:16px; }
       #correctOverlay { position:absolute; inset:0; z-index:1100; display:none; align-items:center; justify-content:center; pointer-events:none; }
       #correctOverlay .msg { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:16px 20px; font: bold 36px monospace; letter-spacing:2px; text-shadow:0 0 6px #00ff88; }
+      #correctOverlay .msg .sub { margin-top:8px; font: bold 18px monospace; letter-spacing:1px; }
       #wrongOverlay { position:absolute; inset:0; z-index:1100; display:none; align-items:center; justify-content:center; pointer-events:none; }
       #wrongOverlay .msg { background:#111; color:#ff6b6b; border:2px solid #ff6b6b; border-radius:10px; padding:16px 20px; font: bold 36px monospace; letter-spacing:2px; text-shadow:0 0 6px #ff6b6b; }
     </style>
@@ -162,6 +164,9 @@
                 btn.classList.add('correct');
                 stopTimer();
                 if (correctOverlay) {
+                  const name = cleanParkName(current && current.properties && current.properties.name || '');
+                  const box = correctOverlay.querySelector('.msg');
+                  if (box) box.innerHTML = `KORREKT<div class="sub">${name}</div>`;
                   correctOverlay.style.display = 'flex';
                   setTimeout(()=>{ correctOverlay.style.display = 'none'; startRound(); }, 1000);
                 } else {
