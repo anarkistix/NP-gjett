@@ -1,0 +1,10 @@
+---
+globs: *.html
+---
+Alle nye og endrede sider skal designes mobil-først:
+- Bruk viewport meta og layout tilpasset 360–430 px bredde
+- Kart og paneler må være touch-vennlige, store trykkflater
+- Unngå hover-avhengighet; bruk klikk/tap
+- Sticky topp/bunn-elementer bør ikke dekke interaksjoner
+- Ytelse: last minst mulig, defer tunge kalkulasjoner
+- Build-nummer skal vises i øvre venstre hjørne via element med id "build"

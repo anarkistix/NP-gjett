@@ -1,0 +1,20 @@
+---
+alwaysApply: true
+---
+# Byggversjonering
+
+- Les versjon fra [build_version.json](mdc:build_version.json)
+- Oppdater `build`-feltet for hver releasable endring (inkrementér siste siffer som `YYYY.MM.DD.N`)
+- Sett `generatedAt` til gjeldende UTC-tid (ISO 8601)
+- Fyll inn korte `notes` om hva som er endret
+- Sørg for at sider med kart/admin viser merket i øvre venstre via elementet med id `build`
+- I `norge.html` og `spill.html` skal merket lastes med `fetch('build_version.json')` ved oppstart
+---
+alwaysApply: true
+---
+# Byggversjonering
+
+- Les versjon fra [build_version.json](mdc:build_version.json)
+- Vis buildnummer øverst til venstre i UI på sider med kart/admin
+- Oppdater `build`-feltet for hver releasable endring
+- Notater kan legges i `notes`

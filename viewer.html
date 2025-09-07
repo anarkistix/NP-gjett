@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Polygonviser</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
+    <style>
+      html, body { height: 100%; margin: 0; }
+      #top { display: flex; gap: 8px; align-items: center; padding: 8px; border-bottom: 1px solid #ddd; font: 13px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+      #map { position: absolute; inset: 40px 0 0 0; }
+      select, input, button { font: inherit; padding: 4px 6px; }
+      #meta { margin-left: auto; color: #444; }
+    </style>
+  </head>
+  <body>
+    <div id="top">
+      <label for="polySelect">Velg polygon:</label>
+      <select id="polySelect"></select>
+      <button id="fit">Zoom til</button>
+      <span id="meta"></span>
+      <span id="progress" style="margin-left:16px; color:#666"></span>
+      <span id="info" style="margin-left:8px; color:#a33"></span>
+    </div>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+    <script>
+      const map = L.map('map', { zoomControl: true });
+      const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+
+      const layer = L.geoJSON(null).addTo(map);
+
+      function loadDataset() {
+        try {
+          const raw = localStorage.getItem('np_dataset_latest');
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch (_) { return null; }
+      }
+      function loadProgress() {
+        try { return Number(localStorage.getItem('np_load_progress') || '0'); } catch (_) { return 0; }
+      }
+
+      const data = loadDataset();
+      const select = document.getElementById('polySelect');
+      const meta = document.getElementById('meta');
+      const progressEl = document.getElementById('progress');
+      const infoEl = document.getElementById('info');
+
+      const items = [];
+      if (data && Array.isArray(data.features)) {
+        for (const f of data.features) {
+          if (!f || !f.geometry) continue;
+          if (!f.properties || f.properties.source !== 'park') continue;
+          // Vis bare ikke-slettede
+          if (f.properties && f.properties.status === 'deleted') continue;
+          const name = (f.properties && (f.properties.name || f.properties.code)) || 'Uten navn';
+          items.push({ id: f.properties && f.properties.id, name, feature: f });
+        }
+      }
+
+      items.sort((a,b) => String(a.name).localeCompare(String(b.name)));
+      for (const it of items) {
+        const opt = document.createElement('option');
+        opt.value = String(it.id);
+        opt.textContent = `${it.name} (#${it.id})`;
+        select.appendChild(opt);
+      }
+
+      function showSelected() {
+        const id = Number(select.value);
+        const it = items.find(x => x.id === id);
+        if (!it) return;
+        layer.clearLayers();
+        layer.addData(it.feature);
+        try { map.fitBounds(layer.getBounds().pad(0.2)); } catch (_) { map.setView([64.5, 16], 5); }
+        const p = it.feature.properties || {};
+        meta.textContent = `Kilde: ${p.source || '–'} | Status: ${p.status || '–'} | Punkter: ${p.vertexCount ?? '–'} | Lengde: ${typeof p.perimeterKm === 'number' ? p.perimeterKm.toFixed(2)+' km' : '–'}`;
+      }
+
+      document.getElementById('fit').addEventListener('click', showSelected);
+      select.addEventListener('change', showSelected);
+
+      if (items.length) {
+        select.value = String(items[0].id);
+        showSelected();
+      } else {
+        map.setView([64.5, 16], 5);
+      }
+
+      // Vis lastestatus i % og poll noen sekunder i tilfelle hovedsiden fortsatt laster
+      function updateProgress() {
+        const p = loadProgress();
+        progressEl.textContent = `Lastet: ${isFinite(p) && p >= 0 ? p : 0}%`;
+      }
+      updateProgress();
+      let tries = 0;
+      const t = setInterval(() => {
+        updateProgress();
+        // Hvis listen er tom men progress øker, prøv å fylle på dynamisk
+        if (!items.length) {
+          const fresh = loadDataset();
+          if (fresh && Array.isArray(fresh.features) && fresh.features.length) {
+            for (const f of fresh.features) {
+              if (!f || !f.geometry) continue;
+              if (!f.properties || f.properties.source !== 'park') continue;
+              if (f.properties && f.properties.status === 'deleted') continue;
+              const name = (f.properties && (f.properties.name || f.properties.code)) || 'Uten navn';
+              items.push({ id: f.properties && f.properties.id, name, feature: f });
+            }
+            items.sort((a,b) => String(a.name).localeCompare(String(b.name)));
+            for (const it of items) {
+              const opt = document.createElement('option');
+              opt.value = String(it.id);
+              opt.textContent = `${it.name} (#${it.id})`;
+              select.appendChild(opt);
+            }
+            if (items.length) {
+              select.value = String(items[0].id);
+              showSelected();
+            }
+            clearInterval(t);
+          }
+        }
+        tries++;
+        if (tries > 60) {
+          // Hvis fortsatt tom liste, vis hint
+          if (!items.length) {
+            const p = loadProgress();
+            infoEl.textContent = p >= 100 ? 'Ingen nasjonalparker lastet. Oppdater hovedsiden og prøv igjen.' : 'Venter på data fra hovedsiden…';
+          }
+          clearInterval(t);
+        }
+      }, 1000);
+    </script>
+  </body>
+  </html>
+
+

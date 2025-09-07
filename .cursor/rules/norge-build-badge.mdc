@@ -1,0 +1,11 @@
+---
+alwaysApply: true
+description: "Vis buildnummer øverst til venstre i norge.html"
+---
+# Byggversjon i Norge-visning
+
+- Les versjon fra [build_version.json](mdc:build_version.json)
+- I `norge.html` skal build-merket alltid vises øverst til venstre (`#build`), og oppdateres ved last:
+  - Element: `<div class="hud" id="build" style="top:10px; left:10px">`.
+  - Tekst settes til `Build: <build>` etter `fetch('build_version.json')`.
+

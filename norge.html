@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Norge – rask visning</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
+    <style>
+      html, body { height: 100%; margin: 0; }
+      #map { height: 100%; width: 100%; background: #fff; }
+      .hud { position:absolute; top:10px; left:10px; z-index:900; background:rgba(255,255,255,0.9); border:1px solid #ccc; border-radius:4px; padding:6px 8px; font:12px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+      .panel { position:absolute; top:10px; right:10px; z-index:900; background:rgba(255,255,255,0.95); border:1px solid #ccc; border-radius:6px; padding:10px; width:280px; max-height:70vh; overflow:auto; font:12px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+      .panel h4 { margin:0 0 8px 0; font-size:13px; }
+      .panel label { display:block; margin:6px 0 4px; }
+      .panel input[type=number] { width:80px; }
+      .panel button { padding:5px 8px; margin-right:6px; }
+      .item { margin:6px 0; border-bottom:1px solid #eee; padding-bottom:6px; }
+      .small { color:#555; }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div class="hud" id="hud">Laster Norge…</div>
+    <div class="hud" id="build" style="top:10px; left:10px">Build: …</div>
+    <div class="panel" id="panel" style="display:none">
+      <h4>Avviksfilter</h4>
+      <label for="th">Min. avstand (km):</label>
+      <input type="number" id="th" value="15" min="1" step="1" />
+      <button id="run">Analyser</button>
+      <button id="restoreUnder">Synliggjør < 100 km</button>
+      <button id="hideOver">Skjul > 200 km</button>
+      <button id="download">Last ned JSON</button>
+      <div id="list" style="margin-top:8px"></div>
+    </div>
+    <div class="panel" id="infoPanel" style="display:none; right:300px">
+      <h4 id="infoTitle">Park-info</h4>
+      <div id="infoBody" class="small"></div>
+      <div style="margin-top:8px">
+        <button id="infoClose">Lukk</button>
+      </div>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js" crossorigin="anonymous"></script>
+    <script>
+      (async () => {
+        const map = L.map('map', { zoomControl: true, preferCanvas: true });
+        const hud = document.getElementById('hud');
+        const panel = document.getElementById('panel');
+        const norwayStyle = { color:'#111', weight:1.5, fill:false };
+        const parkStyle = { color:'#0a7a62', weight:1.0, fill:true, fillColor:'#cfeee1', fillOpacity:0.35 };
+        const selectedStyle = { color:'#222', weight:1.6, fill:true, fillColor:'#555', fillOpacity:0.45 };
+        const infoPanel = document.getElementById('infoPanel');
+        const infoTitle = document.getElementById('infoTitle');
+        const infoBody = document.getElementById('infoBody');
+        const infoClose = document.getElementById('infoClose');
+        infoClose.addEventListener('click', ()=>{ infoPanel.style.display = 'none'; });
+
+        function baseStyleFor(feature) {
+          return { ...parkStyle };
+        }
+
+        function normalizeText(s) {
+          try { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); } catch { return String(s || '').toLowerCase(); }
+        }
+
+        let hintsCache = null; // { byCode: {}, byName: {} }
+        async function loadHints() {
+          if (hintsCache) return hintsCache;
+          try {
+            const r = await fetch('park_hints.json?ts=' + Date.now());
+            if (r.ok) {
+              const data = await r.json();
+              const byCode = Object.create(null);
+              const byName = Object.create(null);
+              const parks = (data && data.parks) || {};
+              for (const key of Object.keys(parks)) {
+                const entry = parks[key];
+                if (!entry) continue;
+                if (entry.code) byCode[String(entry.code).trim()] = entry;
+                const n = normalizeText(entry.name || key);
+                if (n) byName[n] = entry;
+              }
+              hintsCache = { byCode, byName };
+              return hintsCache;
+            }
+          } catch {}
+          hintsCache = { byCode: {}, byName: {} };
+          return hintsCache;
+        }
+
+        function autoHintsFor(feature, memberFeatures) {
+          try {
+            const parts = Array.isArray(memberFeatures) ? memberFeatures : [feature];
+            const areas = parts.map(f => turf.area(f));
+            const totalKm2 = areas.reduce((a,b)=>a+b,0) / 1e6;
+            const cent = turf.centroid(feature);
+            const [clon, clat] = cent.geometry.coordinates;
+            // Finn BBOX
+            let minLat= 90, maxLat = -90, minLon= 180, maxLon = -180;
+            for (const f of parts) {
+              const b = turf.bbox(f);
+              minLon = Math.min(minLon, b[0]);
+              minLat = Math.min(minLat, b[1]);
+              maxLon = Math.max(maxLon, b[2]);
+              maxLat = Math.max(maxLat, b[3]);
+            }
+            // Omtrentlig perimeter fra display-feature
+            let perimKm = 0;
+            try { perimKm = turf.length(turf.polygonToLine(feature), { units:'kilometers' }); } catch {}
+            const hints = [
+              `Består av ca. ${parts.length} delpolygon(er).`,
+              `Omtrentlig areal: ${totalKm2.toFixed(0)} km² (beregnet).`,
+              `Omtrentlig perimeter: ${perimKm ? perimKm.toFixed(0) : 'ukjent'} km.`,
+              `Senterpunkt cirka ved ${clat.toFixed(3)}°N, ${clon.toFixed(3)}°Ø.`,
+              `Nordligste punkt rundt ${maxLat.toFixed(3)}°N.`,
+              `Sørligste punkt rundt ${minLat.toFixed(3)}°N.`,
+              `Vestre utstrekning rundt ${minLon.toFixed(3)}°Ø.`,
+              `Østre utstrekning rundt ${maxLon.toFixed(3)}°Ø.`,
+              'Tilgjengelighet og tilrettelegging kan variere mellom innfallsportene.',
+              'Husk sporløs ferdsel og gjeldende vernebestemmelser.'
+            ];
+            return hints;
+          } catch {
+            return [
+              'Data for detaljerte hint ikke tilgjengelig – viser generelle råd.',
+              'Sporløs ferdsel er viktig i alle nasjonalparker.',
+              'Følg lokale vernebestemmelser.',
+              'Bruk etablerte innfallsporter der det er mulig.',
+              'Respekter dyre- og planteliv.',
+              'Vis hensyn til reindrift og beitebruk.',
+              'Vurder vær og føre før tur.',
+              'Ha med nødvendig sikkerhetsutstyr.',
+              'Ta med deg alt avfall hjem.',
+              'Del opplevelser – ikke spor.'
+            ];
+          }
+        }
+
+        async function showParkInfoGeneric(feature) {
+          const p = (feature && feature.properties) || {};
+          infoTitle.textContent = (p.name || 'Nasjonalpark');
+          const codeLine = p.code ? '<div><strong>Kode:</strong> ' + p.code + '</div>' : '';
+          const cache = await loadHints();
+          const byCode = cache.byCode || {}; const byName = cache.byName || {};
+          const code = String(p.code || '').trim();
+          const nameKey = normalizeText(p.name || '');
+          let entry = null;
+          if (code && byCode[code]) entry = byCode[code];
+          if (!entry && nameKey && byName[nameKey]) entry = byName[nameKey];
+          let hints = null;
+          if (entry && Array.isArray(entry.hints) && entry.hints.length) {
+            hints = entry.hints.slice(0, 10);
+          } else {
+            // forsøk å hente originale delpolygoner for mer presise auto-hint
+            let members = [];
+            try {
+              const mids = Array.isArray(p._memberIds) ? p._memberIds : (p.id != null ? [p.id] : []);
+              if (Array.isArray(mids) && parksDataset && parksDataset.dataset && Array.isArray(parksDataset.dataset.features)) {
+                members = parksDataset.dataset.features.filter(f => f && f.properties && mids.includes(f.properties.id));
+              }
+            } catch {}
+            hints = autoHintsFor(feature, members);
+          }
+          const hintHtml = '<ol style="margin:6px 0 0 18px">' + hints.map(h => '<li>' + h + '</li>').join('') + '</ol>';
+          // Finn representativ original-feature for metadata (som er lagret i np_database.json)
+          let metaProps = p;
+          try {
+            const mids = Array.isArray(p._memberIds) ? p._memberIds : (p.id != null ? [p.id] : []);
+            if (Array.isArray(mids) && parksDataset && parksDataset.dataset && Array.isArray(parksDataset.dataset.features)) {
+              const candidates = parksDataset.dataset.features.filter(f => f && f.properties && mids.includes(f.properties.id));
+              // prioriter den som har ferdig berikede felter
+              const enriched = candidates.find(f => f.properties && (typeof f.properties.areaKm2 === 'number' || (Array.isArray(f.properties.counties) && f.properties.counties.length)));
+              metaProps = (enriched && enriched.properties) || (candidates[0] && candidates[0].properties) || p;
+            }
+          } catch {}
+          const meta = [];
+          if (typeof metaProps.areaKm2 === 'number') meta.push('<div><strong>Areal:</strong> ' + metaProps.areaKm2.toFixed(1) + ' km²</div>');
+          if (metaProps.establishedYear) meta.push('<div><strong>Opprettet:</strong> ' + metaProps.establishedYear + '</div>');
+          if (Array.isArray(metaProps.counties) && metaProps.counties.length) meta.push('<div><strong>Fylker:</strong> ' + metaProps.counties.join(', ') + '</div>');
+          if (Array.isArray(metaProps.municipalities) && metaProps.municipalities.length) meta.push('<div><strong>Kommuner:</strong> ' + metaProps.municipalities.join(', ') + '</div>');
+          const metaHtml = meta.length ? '<div style="margin-top:8px">' + meta.join('') + '</div>' : '';
+          infoBody.innerHTML = codeLine + '<div style="margin-top:6px"><strong>Hint for kunnskapsspill</strong> (kilde: <a href="https://www.norgesnasjonalparker.no/" target="_blank">Norges nasjonalparker</a>):</div>' + hintHtml + metaHtml;
+          infoPanel.style.display = 'block';
+        }
+
+        // Last detaljert lokalt GeoJSON (full kvalitet)
+        const res = await fetch('norway_outline_full.json?ts=' + Date.now());
+        if (!res.ok) throw new Error('Klarte ikke å hente norway_outline_full.json');
+        const gj = await res.json();
+
+        // Tegn i ett lag for lavt minne/DOM-bruk
+        const layer = L.geoJSON(gj, { style: norwayStyle }).addTo(map);
+        try { map.fitBounds(layer.getBounds().pad(0.05)); } catch { map.setView([64.5, 16], 4); }
+        hud.textContent = 'Norge klart – laster nasjonalparker…';
+
+        // Enkelt lokal-lagring av dataset (så slettinger overlever refresh)
+        const STORAGE_KEY = 'np_dataset_latest';
+        const DISPLAY_KEY = 'np_display_map_v1';
+        function saveDatasetLocal() {
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(parksDataset)); } catch (_) {}
+        }
+        function loadDisplayMap() {
+          try { return JSON.parse(localStorage.getItem(DISPLAY_KEY)) || {}; } catch { return {}; }
+        }
+        function saveDisplayMap(map) {
+          try { localStorage.setItem(DISPLAY_KEY, JSON.stringify(map)); } catch (_) {}
+        }
+        const displayMap = loadDisplayMap();
+
+        // Legg på nasjonalparker fra lokal database (kun source==='park')
+        let parksDataset = null; // full dataset for videre analyse / eksport
+        const layersById = new Map();
+        let parksLayer = null;
+        let stabbLayer = null;
+        let selectedLayer = null;
+        try {
+          const dbRes = await fetch('np_database.json?ts=' + Date.now());
+          if (!dbRes.ok) throw new Error('Klarte ikke å hente np_database.json');
+          const db = await dbRes.json();
+          parksDataset = db; // beholder hele
+          const feats = (db && db.dataset && Array.isArray(db.dataset.features)) ? db.dataset.features : [];
+          const parks = feats.filter(f => f && f.properties && f.properties.source === 'park' && f.properties.status !== 'deleted');
+          // tildel id om mangler
+          let autoId = 1;
+          for (const f of parks) {
+            if (!f.properties) f.properties = {};
+            if (typeof f.properties.id !== 'number') {
+              f.properties.id = autoId++;
+            }
+            // beregn stabil uid (kode/navn + centroid avrundet)
+            try {
+              const codeOrName = String(f.properties.code || f.properties.name || '').toLowerCase();
+              const c = turf.centroid(f);
+              const [lon, lat] = c.geometry.coordinates;
+              const key = `${codeOrName}:${lat.toFixed(5)},${lon.toFixed(5)}`;
+              f.properties.uid = key;
+              const disp = displayMap[key];
+              // Respekter eksplisitt display fra fil; bruk localStorage kun hvis display ikke er satt
+              if (!('display' in f.properties)) {
+                f.properties.display = (disp === 'no') ? 'no' : 'yes';
+              }
+            } catch {
+              if (!('display' in f.properties)) f.properties.display = 'yes';
+            }
+          }
+          function rebuildParksLayer() {
+            if (parksLayer) { try { map.removeLayer(parksLayer); } catch(_){} }
+            if (stabbLayer) { try { map.removeLayer(stabbLayer); } catch(_){} }
+            layersById.clear();
+            const visible = parks.filter(f => f.properties.display !== 'no');
+            // Slå sammen delpolygoner per park (Østmarka m.fl.) for visning
+            const groups = new Map();
+            for (const f of visible) {
+              const key = normalizeKey(f.properties);
+              if (!groups.has(key)) groups.set(key, []);
+              groups.get(key).push(f);
+            }
+            const mergedFeats = [];
+            for (const [key, arr] of groups.entries()) {
+              if (!arr.length) continue;
+              // Bygg ett MultiPolygon av alle delene
+              const polys = [];
+              const memberIds = [];
+              for (const f of arr) {
+                const g = f.geometry;
+                if (!g) continue;
+                if (g.type === 'Polygon') polys.push(g.coordinates);
+                else if (g.type === 'MultiPolygon') polys.push(...g.coordinates);
+                const id = f.properties && f.properties.id; if (id != null) memberIds.push(id);
+              }
+              const p0 = arr[0].properties || {};
+              if (polys.length === 1) {
+                mergedFeats.push({ type:'Feature', geometry:{ type:'Polygon', coordinates: polys[0] }, properties:{ id:p0.id, source:'park', name:p0.name, code:p0.code, status:p0.status, display:'yes', _memberIds: memberIds } });
+              } else if (polys.length > 1) {
+                mergedFeats.push({ type:'Feature', geometry:{ type:'MultiPolygon', coordinates: polys }, properties:{ id:p0.id, source:'park', name:p0.name, code:p0.code, status:p0.status, display:'yes', _memberIds: memberIds } });
+              }
+            }
+            const stabbFeats = [];
+            const otherFeats = mergedFeats;
+            const parksFc = { type:'FeatureCollection', features: otherFeats };
+            parksLayer = L.geoJSON(parksFc, {
+              style: (feature) => baseStyleFor(feature),
+              onEachFeature: (feature, layer) => {
+                const p = feature.properties || {};
+                layer._baseStyle = baseStyleFor(feature);
+                layer.setStyle(layer._baseStyle);
+                layer.bindPopup((p.name || 'Nasjonalpark') + (p.code ? ` (${p.code})` : ''));
+                const mids = Array.isArray(p._memberIds) ? p._memberIds : [p.id];
+                for (const mid of mids) { layersById.set(mid, layer); }
+                async function onSelect() {
+                  if (selectedLayer && selectedLayer !== layer) {
+                    try { selectedLayer.setStyle(selectedLayer._baseStyle || parkStyle); } catch{}
+                  }
+                  selectedLayer = layer;
+                  try { layer.setStyle(selectedStyle); layer.bringToFront(); } catch{}
+                  try { await showParkInfoGeneric(feature); } catch { infoPanel.style.display = 'none'; }
+                }
+                layer.on('click', onSelect);
+                layer.on('popupopen', onSelect);
+              }
+            }).addTo(map);
+            if (stabbFeats.length) {
+              stabbLayer = L.geoJSON({ type:'FeatureCollection', features: stabbFeats }, {
+                style: (feature) => baseStyleFor(feature),
+                onEachFeature: (feature, layer) => {
+                  const p = feature.properties || {};
+                  layer._baseStyle = baseStyleFor(feature);
+                  layer.setStyle(layer._baseStyle);
+                  layer.bindPopup((p.name || 'Stabbursdalen nasjonalpark') + (p.code ? ` (${p.code})` : ''));
+                  const mids = Array.isArray(p._memberIds) ? p._memberIds : [p.id];
+                  for (const mid of mids) { layersById.set(mid, layer); }
+                  async function onSelect() {
+                    if (selectedLayer && selectedLayer !== layer) {
+                      try { selectedLayer.setStyle(selectedLayer._baseStyle || parkStyle); } catch{}
+                    }
+                    selectedLayer = layer;
+                    try { layer.setStyle(selectedStyle); layer.bringToFront(); } catch{}
+                    try { await showParkInfoGeneric(feature); } catch { infoPanel.style.display = 'none'; }
+                  }
+                  layer.on('click', onSelect);
+                  layer.on('popupopen', onSelect);
+                }
+              }).addTo(map);
+              try { stabbLayer.bringToFront(); } catch(_){}
+            }
+          }
+          map.on('click', (e) => {
+            // Deselect when clicking outside features
+            if (selectedLayer) {
+              try { selectedLayer.setStyle(selectedLayer._baseStyle || parkStyle); } catch{}
+              selectedLayer = null;
+            }
+            infoPanel.style.display = 'none';
+          });
+          rebuildParksLayer();
+          hud.textContent = 'Norge + nasjonalparker klart';
+          panel.style.display = 'block';
+          saveDatasetLocal();
+        } catch (e) {
+          console.warn(e);
+          hud.textContent = 'Norge klart (parker feilet)';
+        }
+        setTimeout(() => hud.remove(), 1200);
+
+        // Vis buildnummer
+        try {
+          const b = await fetch('build_version.json?ts=' + Date.now());
+          if (b.ok) {
+            const v = await b.json();
+            const el = document.getElementById('build');
+            if (el && v && v.build) el.textContent = 'Build: ' + v.build;
+          }
+        } catch {}
+
+        // Analyse / filter-knapp
+        const thInput = document.getElementById('th');
+        const listEl = document.getElementById('list');
+        document.getElementById('run').addEventListener('click', () => {
+          const th = Math.max(1, Number(thInput.value || 15));
+          runAnalysis(th);
+        });
+
+        // Synliggjør alle polygoner med avstand < 100 km fra sitt hovedpolygon
+        document.getElementById('restoreUnder').addEventListener('click', () => {
+          restoreVisibleUnder(100);
+        });
+        // Skjul alle polygoner med avstand > 200 km
+        document.getElementById('hideOver').addEventListener('click', () => {
+          hideOver(200);
+        });
+        document.getElementById('hideOver').addEventListener('click', () => {
+          hideOver(200);
+        });
+
+        function normalizeKey(p) {
+          const code = p && p.code; const name = p && p.name;
+          return String(code || name || '').toLowerCase().replace(/[^a-z0-9æøå]/g,'');
+        }
+
+        let currentOutliers = [];
+        function runAnalysis(thKm) {
+          if (!parksDataset) return;
+          const feats = (parksDataset.dataset && parksDataset.dataset.features) || [];
+          const parks = feats.filter(f => f && f.geometry && f.properties && f.properties.source==='park' && f.properties.status!=='deleted' && f.properties.display !== 'no');
+          // grupper per park
+          const groups = new Map();
+          for (const f of parks) {
+            const key = normalizeKey(f.properties);
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(f);
+          }
+          const items = [];
+          for (const [key, arr] of groups.entries()) {
+            if (!arr.length) continue;
+            // finn hovedpolygon (størst areal)
+            let main = arr[0], maxA = 0;
+            for (const f of arr) { const a = turf.area(f); if (a > maxA) { maxA = a; main = f; } }
+            const cMain = turf.centroid(main);
+            for (const f of arr) {
+              if (f === main) continue;
+              const dist = turf.distance(cMain, turf.centroid(f), { units:'kilometers' });
+              if (dist >= thKm) {
+                items.push({ id: f.properties.id, name: f.properties.name || 'Nasjonalpark', code: f.properties.code, dist, feature: f });
+              }
+            }
+          }
+          items.sort((a,b)=> b.dist - a.dist);
+          currentOutliers = items;
+          renderList(currentOutliers);
+        }
+
+        async function enrichMetadata(onlyIfMissing = false) {
+          if (!parksDataset) return;
+          hud.textContent = 'Beriker metadata…';
+          try {
+            // Hent grenser (lokale filer lastet ned)
+            const [fylkerRes, kommunerRes, hintsRes] = await Promise.all([
+              fetch('fylker2018.geojson?ts=' + Date.now()),
+              fetch('kommuner2018.geojson?ts=' + Date.now()),
+              fetch('park_hints.json?ts=' + Date.now())
+            ]);
+            const fylker = fylkerRes.ok ? (await fylkerRes.json()) : { type:'FeatureCollection', features: [] };
+            const kommuner = kommunerRes.ok ? (await kommunerRes.json()) : { type:'FeatureCollection', features: [] };
+            const hintsData = hintsRes.ok ? (await hintsRes.json()) : { parks: {} };
+            const fylkeFeats = Array.isArray(fylker.features) ? fylker.features : [];
+            const kommuneFeats = Array.isArray(kommuner.features) ? kommuner.features : [];
+
+            // Navnefelt autodeteksjon
+            function getName(obj) {
+              const cand = ['navn','NAVN','fylkesnavn','kommunenavn','KOMNAVN','name'];
+              const p = obj && obj.properties || {};
+              for (const k of cand) { if (p[k] != null) return String(p[k]); }
+              return '';
+            }
+
+            // For lookup av etableringsår fra park_hints
+            function extractYearFromHints(code, name) {
+              try {
+                const parks = hintsData && hintsData.parks || {};
+                const keyByCode = Object.keys(parks).find(k => String(parks[k].code||'').trim() === String(code||'').trim());
+                const entry = keyByCode ? parks[keyByCode] : parks[(String(name||'').toLowerCase())] || null;
+                const arr = entry && Array.isArray(entry.hints) ? entry.hints : [];
+                for (const h of arr) {
+                  const m = String(h).match(/Opprettet i\s+(\d{4})/i);
+                  if (m) return Number(m[1]);
+                }
+              } catch {}
+              return null;
+            }
+
+            // Bygg merged visningsobjekter på nytt for presise geometrier
+            const feats = (parksDataset.dataset && parksDataset.dataset.features) || [];
+            const parksAll = feats.filter(f => f && f.geometry && f.properties && f.properties.source==='park' && f.properties.status!=='deleted');
+            const groups = new Map();
+            for (const f of parksAll) {
+              const key = normalizeKey(f.properties);
+              if (!groups.has(key)) groups.set(key, []);
+              groups.get(key).push(f);
+            }
+            let doneCount = 0; const total = groups.size;
+            for (const [key, arr] of groups.entries()) {
+              // lag et MultiPolygon feature
+              const polys = [];
+              const memberIds = [];
+              let repProps = arr[0].properties || {};
+              for (const f of arr) {
+                const g = f.geometry; if (!g) continue;
+                if (g.type === 'Polygon') polys.push(g.coordinates);
+                else if (g.type === 'MultiPolygon') polys.push(...g.coordinates);
+                const id = f.properties && f.properties.id; if (id != null) memberIds.push(id);
+              }
+              if (!polys.length) continue;
+              const merged = { type:'Feature', properties:{ name: repProps.name, code: repProps.code }, geometry: polys.length===1 ? { type:'Polygon', coordinates: polys[0] } : { type:'MultiPolygon', coordinates: polys } };
+              // areal km²
+              const areaKm2 = turf.area(merged) / 1e6;
+              // finn fylker/kommuner som berører (intersects)
+              const countySet = new Set();
+              for (const fy of fylkeFeats) {
+                try { if (turf.booleanIntersects(merged, fy)) countySet.add(getName(fy)); } catch {}
+              }
+              const kommuneSet = new Set();
+              for (const ko of kommuneFeats) {
+                try { if (turf.booleanIntersects(merged, ko)) kommuneSet.add(getName(ko)); } catch {}
+              }
+              const counties = Array.from(countySet).filter(Boolean).sort((a,b)=>a.localeCompare(b,'no'));
+              const municipalities = Array.from(kommuneSet).filter(Boolean).sort((a,b)=>a.localeCompare(b,'no'));
+              const year = extractYearFromHints(repProps.code, repProps.name);
+
+              // skriv tilbake på alle medlems-features (hopp over hvis onlyIfMissing og alt finnes)
+              for (const f of arr) {
+                if (!f.properties) f.properties = {};
+                const hasAll = (f.properties.areaKm2 && Array.isArray(f.properties.counties) && Array.isArray(f.properties.municipalities) && f.properties.establishedYear);
+                if (onlyIfMissing && hasAll) continue;
+                f.properties.areaKm2 = f.properties.areaKm2 || Number(areaKm2.toFixed(1));
+                f.properties.counties = f.properties.counties && f.properties.counties.length ? f.properties.counties : counties;
+                f.properties.municipalities = f.properties.municipalities && f.properties.municipalities.length ? f.properties.municipalities : municipalities;
+                if (year && !f.properties.establishedYear) f.properties.establishedYear = year;
+              }
+              doneCount++;
+              if (doneCount % 5 === 0) hud.textContent = `Beriker metadata… (${doneCount}/${total})`;
+            }
+            // lagre
+            try {
+              const r = await fetch('http://127.0.0.1:8777/save-db', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(parksDataset) });
+              if (!r.ok) throw new Error('lagring feilet');
+            } catch (e) { console.warn('Lagring feilet', e); }
+            hud.textContent = 'Beriking fullført';
+            setTimeout(()=>{ try { hud.remove(); } catch {} }, 1500);
+          } catch (e) {
+            console.warn(e);
+            hud.textContent = 'Berik feilet';
+            setTimeout(()=>{ try { hud.remove(); } catch {} }, 1500);
+          }
+        }
+
+        function renderList(items) {
+          if (!items.length) { listEl.innerHTML = '<div>Ingen avvik over terskel.</div>'; return; }
+          listEl.innerHTML = items.map(it => `
+            <div class="item">
+              <div><strong>${it.name || ''}</strong> ${it.code ? '('+it.code+')':''}</div>
+              <div class="small">Avstand: ${it.dist.toFixed(1)} km • id: ${it.id}</div>
+              <div style="margin-top:4px">
+                <button data-zoom="${it.id}">Zoom</button>
+                <button data-del="${it.id}">Slett</button>
+              </div>
+            </div>
+          `).join('');
+          listEl.querySelectorAll('button[data-zoom]').forEach(btn=>{
+            btn.addEventListener('click', ()=>{
+              const id = Number(btn.getAttribute('data-zoom'));
+              const layer = layersById.get(id);
+              if (layer) try { map.fitBounds(layer.getBounds().pad(0.2)); } catch {}
+            });
+          });
+          listEl.querySelectorAll('button[data-del]').forEach(btn=>{
+            btn.addEventListener('click', ()=>{
+              const id = Number(btn.getAttribute('data-del'));
+              deleteFeature(id);
+              // Fjern fra nåværende avviks-liste i tillegg til DOM
+              currentOutliers = currentOutliers.filter(it => it.id !== id);
+              btn.closest('.item')?.remove();
+            });
+          });
+        }
+
+        function deleteFeature(id) {
+          if (!parksDataset) return;
+          const feats = parksDataset.dataset.features;
+          const idx = feats.findIndex(f => f && f.properties && f.properties.id === id);
+          if (idx === -1) return;
+          feats[idx].properties.display = 'no';
+          if (feats[idx].properties.status !== 'deleted') feats[idx].properties.status = 'deleted';
+          const uid = feats[idx].properties.uid;
+          if (uid) { displayMap[uid] = 'no'; saveDisplayMap(displayMap); }
+          rebuildParksLayer();
+          saveDatasetLocal();
+          // permanent lagring
+          try {
+            fetch('http://127.0.0.1:8777/save-db', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(parksDataset)
+            }).then(r=>{
+              if (!r.ok) throw new Error('lagring feilet');
+            }).catch(err=>{
+              console.warn('Lagring feilet:', err);
+            });
+          } catch (e) { console.warn('Lagring feilet:', e); }
+        }
+
+        // Last ned oppdatert JSON
+        document.getElementById('download').addEventListener('click', ()=>{
+          if (!parksDataset) return;
+          const blob = new Blob([JSON.stringify(parksDataset, null, 2)], { type:'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'np_database_redigert.json';
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setTimeout(()=>URL.revokeObjectURL(url), 1000);
+        });
+
+        function restoreVisibleUnder(thKm) {
+          if (!parksDataset) return;
+          const feats = (parksDataset.dataset && parksDataset.dataset.features) || [];
+          // grupper synlige og skjulte per park
+          const parksAll = feats.filter(f => f && f.geometry && f.properties && f.properties.source==='park' && f.properties.status!=='deleted');
+          const groups = new Map();
+          for (const f of parksAll) {
+            const key = normalizeKey(f.properties);
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(f);
+          }
+          const toRestore = [];
+          for (const [key, arr] of groups.entries()) {
+            if (!arr.length) continue;
+            let main = arr[0], maxA = 0;
+            for (const f of arr) { const a = turf.area(f); if (a > maxA) { maxA = a; main = f; } }
+            const cMain = turf.centroid(main);
+            for (const f of arr) {
+              if (f === main) continue;
+              if (f.properties.display !== 'no') continue;
+              const dist = turf.distance(cMain, turf.centroid(f), { units:'kilometers' });
+              if (dist < thKm) toRestore.push(f);
+            }
+          }
+          if (!toRestore.length) return;
+          // oppdater dataset + kart + displayMap
+          for (const f of toRestore) {
+            f.properties.display = 'yes';
+            const uid = f.properties.uid;
+            if (uid && displayMap[uid] === 'no') { delete displayMap[uid]; saveDisplayMap(displayMap); }
+            // legg tilbake i kartet
+            try {
+              parksLayer.addData(f);
+              // forsøk lagre layer-referanse for id
+              const id = f.properties.id;
+              if (id != null) {
+                const lyr = parksLayer.getLayers().find(l => l.feature && l.feature.properties && l.feature.properties.id === id);
+                if (lyr) layersById.set(id, lyr);
+              }
+            } catch {}
+          }
+          saveDatasetLocal();
+          // Oppdater liste om aktiv
+          currentOutliers = (currentOutliers || []).filter(it => !toRestore.find(r => r.properties.id === it.id));
+          renderList(currentOutliers);
+        }
+
+        function hideOver(thKm) {
+          if (!parksDataset) return;
+          const feats = (parksDataset.dataset && parksDataset.dataset.features) || [];
+          const parksAll = feats.filter(f => f && f.geometry && f.properties && f.properties.source==='park' && f.properties.status!=='deleted');
+          const groups = new Map();
+          for (const f of parksAll) {
+            const key = normalizeKey(f.properties);
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(f);
+          }
+          const toHide = [];
+          for (const [key, arr] of groups.entries()) {
+            if (!arr.length) continue;
+            let main = arr[0], maxA = 0;
+            for (const f of arr) { const a = turf.area(f); if (a > maxA) { maxA = a; main = f; } }
+            const cMain = turf.centroid(main);
+            for (const f of arr) {
+              if (f === main) continue;
+              const dist = turf.distance(cMain, turf.centroid(f), { units:'kilometers' });
+              if (dist > thKm) toHide.push(f);
+            }
+          }
+          for (const f of toHide) {
+            f.properties.display = 'no';
+            const uid = f.properties.uid;
+            if (uid) { displayMap[uid] = 'no'; saveDisplayMap(displayMap); }
+          }
+          saveDatasetLocal();
+          rebuildParksLayer();
+          currentOutliers = (currentOutliers || []).filter(it => !toHide.find(r => r.properties.id === it.id));
+          renderList(currentOutliers);
+        }
+      })().catch(e => {
+        const hud = document.getElementById('hud');
+        if (hud) hud.textContent = 'Feil: ' + (e && e.message || e);
+        console.error(e);
+      });
+    </script>
+  </body>
+  </html>
+
+

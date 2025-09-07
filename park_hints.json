@@ -1,0 +1,644 @@
+{
+  "parks": {
+    "borgefjell": {
+      "code": "261",
+      "name": "Børgefjell/Byrkije nasjonalpark",
+      "hints": [
+        "Ligger i Nordland og Trøndelag, inntil svenskegrensen.",
+        "Høyeste topp er Kvigtinden (1699 moh).",
+        "Kjent for krystallklare fjellvann og svært god røye.",
+        "Svært lite tilrettelagt – ingen T-merkede stier eller betjente hytter.",
+        "Kjerneområde for sørsamisk reindrift.",
+        "Kilder til lakseelva Namsen ligger i området.",
+        "Etablert i 1963 – blant de eldste nasjonalparkene i Norge.",
+        "Domineres av avrundede fjell av gneis/granitt, vidder og daler.",
+        "Rovdyr og rovfugl: jerv og kongeørn, fjellrev i regionen.",
+        "Store vann som Namsvatnet er viktige innfallsporter."
+      ]
+    },
+    "reisa nasjonalpark/raisa albmotlas meahcci": {
+      "code": "108",
+      "name": "Reisa nasjonalpark/Ráisa álbmotlas meahcci",
+      "hints": [
+        "Dype canyoner og mektige fosser som Mollisfossen (ca. 269 m).",
+        "Reisadalen er preget av elvegjennombrudd og kløfter.",
+        "Gamle ferdselsveier og kulturspor i dalføret.",
+        "Variasjon fra bjørkeskog og furumoer til nakne høyfjell.",
+        "Viktige leveområder for rovfugl og skogsfugl.",
+        "Samer og kvener har lange tradisjoner i området.",
+        "Elva Reisa er sentral for fiske og friluftsliv (utenfor vernesoner).",
+        "Lite tilrettelegging – opplevelse av villmark og stillhet.",
+        "Kontraster mellom trange juv og åpne vidder.",
+        "Opprettet i 1986 for å verne unike dal- og elvelandskap."
+      ]
+    },
+    "langsua nasjonalpark": {
+      "code": "1144",
+      "name": "Langsua nasjonalpark",
+      "hints": [
+        "Vidstrakt høyfjellsplatå mellom Valdres og Gudbrandsdalen.",
+        "Store myr- og våtmarksområder med rikt fugleliv.",
+        "Slake åser og åpne vidder egnet for lange vandringer.",
+        "Viktig leveområde for både ryper og rovfugl.",
+        "Kulturspor etter seterdrift og ferdsel i randsonene.",
+        "Elver og bekker renner mot både øst og vest.",
+        "Lite teknisk tilrettelegging – rolig friluftsområde.",
+        "Vinterstid preget av vidde og værutsatt terreng.",
+        "Nærhet til Dovrefjell og Jotunheimen som naboregioner.",
+        "Opprettet i 2011 ved utvidelse/omorganisering av vernet."
+      ]
+    },
+    "anderdalen nasjonalpark": {
+      "code": "117",
+      "name": "Ånderdalen nasjonalpark",
+      "hints": [
+        "Ligger på Senja med kystnær natur fra fjord til fjell.",
+        "Variert skog med både furu- og bjørkeskog samt myrer.",
+        "Korte avstander fra havstrender til alpine topper.",
+        "Rikt fugleliv og spor etter bosetting og bruk.",
+        "Elver og vann gir gode fiskeopplevelser (etter gjeldende regler).",
+        "Lite tilrettelegging – naturnære turopplevelser.",
+        "Markerte kontraster i lys og vær langs kysten.",
+        "Beite- og reindriftsområde med lange tradisjoner.",
+        "Klar kystpåvirkning på vegetasjon og klima.",
+        "Opprettet i 1970 som en av de første kystparkene i nord."
+      ]
+    },
+    "øvre pasvik nasjonalpark/bahcaveaji albmotmeahcci": {
+      "code": "12",
+      "name": "Øvre Pasvik nasjonalpark/Báhčaveaji Álbmotmeahcci",
+      "hints": [
+        "Grenseskog i østlig Finnmark – urskogspreget furudominert landskap.",
+        "Trekantlandet mellom Norge, Finland og Russland.",
+        "Myr- og skogkompleks med mange vann og tjern.",
+        "Rikt fugleliv med både østlige og nordlige arter.",
+        "Sårbar natur – ferdsel krever hensyn hele året.",
+        "Kulturhistorie knyttet til grensevakt og bosetting.",
+        "Viktige leveområder for store rovdyr i regionen.",
+        "Store avstander og få tilrettelagte stier.",
+        "Sval og kontinentalt klima gir kalde vintre.",
+        "Opprettet i 1970 – utvidet i nyere tid for å sikre skogvillmark."
+      ]
+    },
+    "rago nasjonalpark": {
+      "code": "130",
+      "name": "Rago nasjonalpark",
+      "hints": [
+        "Lite, men spektakulært fjellområde i Nordland ved svenskegrensen.",
+        "Granittlandskap med dype kløfter og blankskurte svaberg.",
+        "Nær sammenheng med Padjelanta/Sarek på svensk side.",
+        "Kjente fossefall som Litlverivassfossen.",
+        "Krevende terreng med sparsom merking – villmarksfølelse.",
+        "Rikt dyre- og fugleliv i overgangen mellom kyst og innland.",
+        "Store høydeforskjeller på korte avstander.",
+        "Utsiktspunkter gir vidt overblikk mot svenske nasjonalparker.",
+        "Tynt løsmassedekke – mye bart fjell.",
+        "Opprettet i 1971 for å verne unik fjellnatur i nord."
+      ]
+    },
+    "øvre dividal nasjonalpark/dievaidvuovddi albmotmeahcci": {
+      "code": "131",
+      "name": "Øvre Dividal nasjonalpark/Dieváidvuovddi álbmotmeahcci",
+      "hints": [
+        "Innlandspark i Troms med kontinentalt, tørt klima.",
+        "Dype daler, furumoer og vidstrakte bjørkeskoger.",
+        "Elver og vann med gode fiskemuligheter (etter regler).",
+        "Viktige trekk- og leveområder for reindrift.",
+        "Rikt dyreliv inkludert rovfugl og ugler.",
+        "Snørike vintre og markerte årstider.",
+        "Store villmarksområder med få tilrettelagte stier.",
+        "Berggrunn og løsmasser danner markerte terrasseformer.",
+        "Gamle kulturspor fra ferdsel gjennom dalførene.",
+        "Opprettet i 1971 – tidlig nordnorsk fjellpark."
+      ]
+    },
+    "blafjella-skjækerfjella/laarte-skæhkere nasjonalpark": {
+      "code": "1562",
+      "name": "Blåfjella-Skjækerfjella/Låarte-Skæhkere nasjonalpark",
+      "hints": [
+        "Ett av Norges største sammenhengende verneområder i Trøndelag.",
+        "Store myr- og fjellområder med lite tilrettelegging.",
+        "Viktige leveområder for villrein og rovvilt.",
+        "Sørsamisk kultur og reindrift er sentralt i bruken av området.",
+        "Talrike vatn og elver – fiskemuligheter (etter regler).",
+        "Kontraster mellom skogkledde daler og åpne høyfjell.",
+        "Gamle ferdselsruter og kulturminner i randsonene.",
+        "Varierende klima fra kystpåvirket til kontinentalt.",
+        "Krevende navigasjon – kart og kompass anbefales.",
+        "Opprettet i 2004 for å verne storfjellet i indre Trøndelag."
+      ]
+    },
+    "jotunheimen nasjonalpark": {
+      "code": "1869",
+      "name": "Jotunheimen nasjonalpark",
+      "hints": [
+        "Huser Norges to høyeste fjell: Galdhøpiggen (2469 moh) og Glittertind.",
+        "Alpin storfjellnatur med breer, bratte egger og dype daler.",
+        "Kjent for klassiske fotturer som Besseggen og Glitterheim–Spiterstulen.",
+        "Rikt nett av hytter og ruter – et av landets mest besøkte fjellområder.",
+        "Navnet betyr ‘kjempers hjem’ – Jǫtunn fra norrøn mytologi.",
+        "Flere isbreer og snøfonner som ligger igjen store deler av året.",
+        "Viktige leveområder for villrein og fjellrype.",
+        "Store innsjøer som Gjende og Bygdin preger landskapet.",
+        "Variert geologi med gneis og skyvedekker fra den kaledonske fjellkjeden.",
+        "Opprettet i 1980 for å verne norsk høyfjellsnatur."
+      ]
+    },
+    "rondane nasjonalpark": {
+      "code": "1873",
+      "name": "Rondane nasjonalpark",
+      "hints": [
+        "Norges eldste nasjonalpark – opprettet i 1962.",
+        "Høyeste topp er Rondslottet (2178 moh).",
+        "Kjent for store villreinflokker og åpne steinur-vidder.",
+        "Tørt, kontinentalt klima gir skarpe former og lite vegetasjon høyt oppe.",
+        "Runde fjellmassiv med dype daler som Dørålen og Atndalen.",
+        "Rikt kultursporlandskap med gamle ferdselsveier.",
+        "Gode muligheter for lange hytte-til-hytte-turer.",
+        "Særpregede blågrå bergarter og morenelandskap.",
+        "Leveområder for fjellrev, kongeørn og rovfugl.",
+        "Et ikon for norsk friluftsliv og klassisk høyfjell."
+      ]
+    },
+    "hardangervidda nasjonalpark": {
+      "code": "1878",
+      "name": "Hardangervidda nasjonalpark",
+      "hints": [
+        "Norges største nasjonalpark og Europas største høyfjellsplatå.",
+        "Huser en av Europas største bestander av villrein.",
+        "Vidstrakt, flatt terreng med myrer, vatn og slake høydedrag.",
+        "Hardangerjøkulen er en dominerende isbre i området.",
+        "Rikt fugleliv knyttet til våtmarker og vann.",
+        "Tøft vær kan komme raskt – raskt skiftende forhold.",
+        "Viktige kulturminner fra forhistorisk reinsjakt.",
+        "Store trekkveier for villrein på tvers av vidda.",
+        "Markerte innfallsporter fra bl.a. Haugastøl, Finse og Eidfjord.",
+        "Opprettet i 1981 for å verne viddefjell og villrein."
+      ]
+    },
+    "dovrefjell-sunndalsfjella nasjonalpark": {
+      "code": "1897",
+      "name": "Dovrefjell-Sunndalsfjella nasjonalpark",
+      "hints": [
+        "Kjent for moskus – eneste sted i Norge med fast bestand.",
+        "Snøhetta (2286 moh) rager i sør for parken og dominerer silhuetten.",
+        "Viktige leveområder for villrein og fjellrev.",
+        "Stort variasjonsspenn fra alpine topper til dype daler og elver.",
+        "Rikt kulturlandskap og ferdselsveier over Dovrefjell gjennom historien.",
+        "Flere naturreservater og landskapsvernområder ligger i randsonen.",
+        "Meget god utsikt fra utkikkspunkter langs E6 (utenfor vernesonen).",
+        "Området er del av den kaledonske fjellkjeden.",
+        "Strenge vernebestemmelser for å ivareta sårbare arter.",
+        "Opprettet i 2002 – et av landets største fjellverneområder."
+      ]
+    },
+    "femundsmarka nasjonalpark": {
+      "code": "1943",
+      "name": "Femundsmarka nasjonalpark",
+      "hints": [
+        "Villmarkspreget furuskog og store sjøer – grense mot Sverige.",
+        "Særlig kjent for kanoturer, fiske og stillhet.",
+        "Elver som Røa og Reva forbinder vann og tjern.",
+        "Gammelskog med mye død ved og rike insektsamfunn.",
+        "Lite tilrettelegging – få stier, stor naturopplevelse.",
+        "Rikt fugleliv knyttet til myr og skogsvann.",
+        "Ligger ved innsjøen Femunden – Norges tredje største innsjø.",
+        "Samarbeid om forvaltning med svenske verneområder.",
+        "Tradisjonell bruk: fløting, vedhogst og jakt/fiske.",
+        "Opprettet i 1971 – verner et av Nordens største skogvillmarksområder."
+      ]
+    },
+    "møysalen nasjonalpark": {
+      "code": "2195",
+      "name": "Møysalen nasjonalpark",
+      "hints": [
+        "Kystnær fjellpark på Hinnøya – Møysalen rager 1262 moh.",
+        "Bratte fjell stiger rett opp fra fjorder og hav.",
+        "Utsikt mot Lofoten og Vesterålen fra høye rygger.",
+        "Krevende terreng med raskt skiftende kystvær.",
+        "Rik fauna i regionen, blant annet havørn.",
+        "Kontraster mellom kystlynghei og alpint fjell.",
+        "Glasiært formet landskap med skurte sva og botner.",
+        "Stier av varierende standard – delvis umerket.",
+        "Små brepåvirkede former i høydedragene.",
+        "Opprettet i 2003 for å verne kystnær storfjellnatur."
+      ]
+    },
+    "dovre nasjonalpark": {
+      "code": "2230",
+      "name": "Dovre nasjonalpark",
+      "hints": [
+        "Høyfjellsområde nord for Rondane–Dovrefjell-regionen.",
+        "Viktige leveområder for villrein og rovfugl.",
+        "Åpne rabber, tørre ryggar og alpine former.",
+        "Snøleier huser særpreget vegetasjon.",
+        "Utsikt mot Snøhetta-massivet i sør.",
+        "Geologi preget av kaledonske skyvedekker.",
+        "Kulturhistorie med seterdrift og ferdsel i randsoner.",
+        "Lite tilrettelegging – villmarksopplevelse.",
+        "Værhardt med vind og raskt skifte.",
+        "Opprettet i 2003 for å sikre høyfjellsøkologi og villrein."
+      ]
+    },
+    "skarvan og roltdalen nasjonalpark": {
+      "code": "2272",
+      "name": "Skarvan og Roltdalen nasjonalpark",
+      "hints": [
+        "Store skog- og fjellområder i Trøndelag.",
+        "Dype daler og avrundede høyderygger.",
+        "Viktige trekkruter for rein og rikt dyreliv.",
+        "Gamle setervoller og kulturspor i randsonene.",
+        "Myrdrag, elver og stille skogsterreng.",
+        "Lite tilrettelegging – få merkede stier.",
+        "Kontraster mellom skog og åpent høyfjell.",
+        "Stille områder uten stor trafikk.",
+        "Snørike vintre med skiftende føre.",
+        "Opprettet i 2004 – del av større vernekompleks i Trøndelag."
+      ]
+    },
+    "lierne nasjonalpark/lijre": {
+      "code": "2334",
+      "name": "Lierne nasjonalpark/Lijre",
+      "hints": [
+        "Villmarksområde ved svenskegrensen i Trøndelag.",
+        "Store myr- og skogsområder med mange vann og tjern.",
+        "Forekomst av store rovdyr i regionen.",
+        "Sørsamisk/umesamisk reindrift har lange tradisjoner.",
+        "Lite tilrettelegging – få merkede ruter.",
+        "Rikt fugleliv knyttet til myr og våtmark.",
+        "Gode fiskemuligheter etter lokale regler.",
+        "Kontinentalt klima med kalde vintre.",
+        "Lange avstander og mye stillhet.",
+        "Opprettet i 2004 for å verne skog- og myrvillmark."
+      ]
+    },
+    "folgefonna nasjonalpark": {
+      "code": "2339",
+      "name": "Folgefonna nasjonalpark",
+      "hints": [
+        "Domineres av Folgefonna – Norges sørligste store breplatå.",
+        "Dype fjorder og bratte lier omslutter breen.",
+        "Morener og breforland med artsspesialisert flora.",
+        "Mektige fosser i randsoner – bl.a. i Oddadalen.",
+        "Kystnært klima møter brekulde.",
+        "Glasiologi og geologi er sentrale vernetema.",
+        "Populære breføringer på sikre områder (utenfor vernesoner).",
+        "Utsikt mot Hardangerfjorden.",
+        "Rikt planteliv i lavereliggende lier.",
+        "Opprettet i 2005 for å verne bre og kystfjell."
+      ]
+    },
+    "saltfjellet-svartisen nasjonalpark": {
+      "code": "235",
+      "name": "Saltfjellet-Svartisen nasjonalpark",
+      "hints": [
+        "Stort fjellområde ved polarsirkelen i Nordland.",
+        "Svartisen – Norges nest største isbre – med mange utløpere.",
+        "Variasjon fra bre og alpine topper til skogkledde daler.",
+        "Leveområder for villrein og rovfugl.",
+        "Skille mellom kyst- og innlandsklima.",
+        "Rike kulturminner fra steinalder og samisk bruk.",
+        "Elver som Glomåga danner canyon-former.",
+        "Ikonisk togtrasé over Saltfjellet (utenfor vernesonen).",
+        "Værhardt – raskt skiftende forhold.",
+        "Opprettet i 1989 – en av Norges største parker."
+      ]
+    },
+    "seiland nasjonalpark": {
+      "code": "2436",
+      "name": "Seiland nasjonalpark",
+      "hints": [
+        "Øy-park vest for Alta og Hammerfest med bratte kystfjell.",
+        "Små isbreer og dype daler på en kystnær øy.",
+        "Rikt sjøfuglliv og havpattedyr i omlandet.",
+        "Mosaikk av lynghei, myr og alpint fjell.",
+        "Tidevann og vær påvirker tilgjengelighet.",
+        "Sårbar vegetasjon – følg etablerte stier der de finnes.",
+        "Mye bart fjell og karrig jord.",
+        "Lite infrastruktur – stor naturopplevelse.",
+        "Klar utsikt mot Barentshavet på klare dager.",
+        "Opprettet i 2006 for å verne kystfjell på øy."
+      ]
+    },
+    "varangerhalvøya nasjonalpark/varnjargga albmotmeahcci": {
+      "code": "2437",
+      "name": "Varangerhalvøya nasjonalpark/Várnjárgga álbmotmeahcci",
+      "hints": [
+        "Arktisk preget halvøy med tundra og karrig vidde.",
+        "Verdenskjent for fugletitting – sjeldne arktiske arter.",
+        "Polygonmark og permafrostpregede former enkelte steder.",
+        "Sterkt kystklima med mye vind og raskt værskifte.",
+        "Samisk bruk og reindrift i området.",
+        "Kystklipper, strandenger og åpne bukter.",
+        "Store sesongvariasjoner – midnattssol og mørketid.",
+        "Få stier – villmarksopplevelse.",
+        "Lang kystlinje med rike sjøfuglkolonier.",
+        "Opprettet i 2006 for å verne arktisk kyst- og fjellnatur."
+      ]
+    },
+    "reinheimen nasjonalpark": {
+      "code": "2446",
+      "name": "Reinheimen nasjonalpark",
+      "hints": [
+        "Stort høyfjellsområde mellom Ottadalen og Romsdalen.",
+        "Navnet peker på viktige leveområder for villrein.",
+        "Variert landskap: alpine tinder, brepåvirkede formasjoner og daler.",
+        "Lite tilrettelagt med mange urørte dalfører.",
+        "Rikt fugle- og dyreliv, inkludert rovfugl og fjellrev i regionen.",
+        "Vassdrag med fosser og jettegryter i randsonene.",
+        "Kjente topper i omlandet som Romsdalseggen (utenfor parken).",
+        "Bånd til seterdrift og beitebruk historisk.",
+        "Varierende klima fra vestlandspåvirket til kontinentalt.",
+        "Opprettet i 2006 for å sikre store sammenhengende villmarksområder."
+      ]
+    },
+    "hallingskarvet nasjonalpark": {
+      "code": "2450",
+      "name": "Hallingskarvet nasjonalpark",
+      "hints": [
+        "Langstrakt platåfjell mellom Hol og Ulvik – markant landemerke.",
+        "Høyeste punkt Folarskardnuten (1933 moh).",
+        "Bratte stup mot sør, slakere rygger mot nord.",
+        "Klimaskille mellom vestlandsvær og innlandsklima.",
+        "Rikt fugleliv, bl.a. rovfugl og fjellvåk.",
+        "Nærhet til Hardangervidda og Finse som viktige innfallsporter.",
+        "Sårbar vegetasjon på høyden – kort vekstsesong.",
+        "Mektig utsikt mot Hardangerjøkulen og Hallingdal.",
+        "Historisk ferdsel over skaret og bruk av seterområder.",
+        "Opprettet i 2006 for å verne geologi og høyfjellsøkologi."
+      ]
+    },
+    "junkerdal nasjonalpark/juŋŋkaravuome nasjonalparkka": {
+      "code": "252",
+      "name": "Junkerdal nasjonalpark/Juŋŋkaravuome nasjonalpárkka",
+      "hints": [
+        "Kalkrik berggrunn gir svært rik og sjelden flora.",
+        "Botanisk hotspot med orkideer og østlige arter.",
+        "Trange dalfører, fosser og bratte lier.",
+        "Leveområder for rovfugl og større rovdyr.",
+        "Lite tilrettelagt terreng – delvis krevende.",
+        "Snørike vintre og kort vekstsesong.",
+        "Historisk ferdsel over fjellpass mot Sverige.",
+        "Elvedaler med frodig vegetasjon i bunnen.",
+        "Kontraster mellom kalkfuruskog og alpine ryggar.",
+        "Opprettet i 2004 for å verne kalk- og høgfjellsnatur."
+      ]
+    },
+    "lomsdal-visten nasjonalpark/njaarken vaarjelimmiedajve": {
+      "code": "2750",
+      "name": "Lomsdal-Visten nasjonalpark/Njaarken vaarjelimmiedajve",
+      "hints": [
+        "Labyrintisk kyst- og fjellterreng – ofte kalt ‘villmarksparken’.",
+        "Dype kløfter, karstfenomener og underjordisk drenering.",
+        "Elver forsvinner i jordsvelg – grotter og kalklandskap.",
+        "Svært lite tilrettelegging – krevende navigasjon.",
+        "Sørsamisk kultur og tradisjonell bruk.",
+        "Stor variasjon fra kyst til alpint terreng.",
+        "Værhardt kystklima med raske skifter.",
+        "Rike fiskevann og lakseelver i randsoner.",
+        "Kulturminner fra bosetting og bruk.",
+        "Opprettet i 2009 for å verne kompleks kystfjellnatur."
+      ]
+    },
+    "ytre hvaler nasjonalpark": {
+      "code": "2752",
+      "name": "Ytre Hvaler nasjonalpark",
+      "hints": [
+        "Norges første marine nasjonalpark – ytre Oslofjord.",
+        "Kaldtvannskoraller, tareskog og ålegressenger.",
+        "Rikt marint dyre- og planteliv.",
+        "Skjær, holmer, sandstrender og svaberg.",
+        "Kystkultur: los, fyr og fiskerihistorie.",
+        "Viktige hekkeområder for sjøfugl.",
+        "Sårbar natur – hensyn ved ferdsel og båtliv.",
+        "Populært for dykking og kajakk (etter regler).",
+        "Varierende strøm og sikt under vann.",
+        "Opprettet i 2009 for å verne marine økosystemer."
+      ]
+    },
+    "breheimen nasjonalpark": {
+      "code": "2830",
+      "name": "Breheimen nasjonalpark",
+      "hints": [
+        "Navnet viser til mange breer og breforland.",
+        "Spisse tinder og dype daler preger landskapet.",
+        "Rikt kulturlandskap og seterdrift i randsoner.",
+        "Klassiske dalfører som Utla og Mørkrisdalen.",
+        "Krevende terreng og skredutsatte brattheng.",
+        "Stor snømengde vinterstid.",
+        "Variert geologi og morenelandskap.",
+        "Elver og stryk leder smeltevann mot fjordene.",
+        "Utsikt mot Hurrungane i omlandet.",
+        "Opprettet i 2009 for å verne brepåvirket høyfjell."
+      ]
+    },
+    "sjunkhatten nasjonalpark/davga suoddjimparkka": {
+      "code": "2858",
+      "name": "Sjunkhatten nasjonalpark/Dávga suoddjimpárkka",
+      "hints": [
+        "Kystnær fjellverden i Salten med fjorder og alpine tinder.",
+        "Kjent som ‘Barnas nasjonalpark’ – familievennlige områder.",
+        "Kalkrik geologi gir rik flora noen steder.",
+        "Mange vann og elver mellom fjellryggene.",
+        "Rikt fugleliv – havørn vanlig i regionen.",
+        "Kontraster mellom blankskurt fjell og frodige daler.",
+        "Stier av varierende standard – delvis lite merket.",
+        "Utsikt mot kyst og skjærgård.",
+        "Kulturlandskap i randsoner.",
+        "Opprettet i 2010 for å verne kystfjell i Salten."
+      ]
+    },
+    "rohkunborri nasjonalpark": {
+      "code": "3005",
+      "name": "Rohkunborri nasjonalpark",
+      "hints": [
+        "Fjellområde ved svenskegrensen sør i Troms.",
+        "Store myr- og skogsområder samt åpne høyfjell.",
+        "Viktige trekkveier for rein og rikt fugleliv.",
+        "Minner etter bosetting og bruk i dalførene.",
+        "Snørike vintre og lange vårflommer.",
+        "Elver danner kløfter og små fosser.",
+        "Lite tilrettelegging – egnet for erfarne turgåere.",
+        "Kontinentalt klima med kalde vinternetter.",
+        "Markerte årstidsskifter.",
+        "Opprettet i 2011 for å verne skog- og fjellnatur."
+      ]
+    },
+    "fulufjellet nasjonalpark": {
+      "code": "3056",
+      "name": "Fulufjellet nasjonalpark",
+      "hints": [
+        "Høyfjellsplatå på grensen til Sverige – fortsettelse av Fulufjället.",
+        "Slakt terreng med bratte kanter mot dalene.",
+        "Rikt myr- og våtmarksområde med fugl.",
+        "Sandsteinsbergart gir særegne former.",
+        "Nærhet til Njupeskär (på svensk side), en av Nordens høyeste fosser.",
+        "Stille område med få merkede stier.",
+        "Vinterløyper i randsoner utenfor vernesonen.",
+        "Gode forhold for ski og snøscooterløyper utenfor parken.",
+        "Sårbar lavalpin vegetasjon.",
+        "Opprettet i 2012 for å verne platåfjell og myr."
+      ]
+    },
+    "lahko nasjonalpark": {
+      "code": "3061",
+      "name": "Láhko nasjonalpark",
+      "hints": [
+        "Norges største karstområde – kalkstein med grotter og jordsvelg.",
+        "Tallrike sinkholes og underjordiske elver.",
+        "Rik kalkflora med sjeldne arter.",
+        "Berggrunn som lett løses opp gir særegen overflate.",
+        "Mange småvatn på høye platåer.",
+        "Lite tilrettelegging – krevende ferdsel i bratt terreng.",
+        "Sårbar geologi – skånsom ferdsel nødvendig.",
+        "Overganger mot isbrepåvirket landskap i nærheten.",
+        "Spennende geologiprosesser synlige i felt.",
+        "Opprettet i 2012 for å verne karstlandskap i Nordland."
+      ]
+    },
+    "færder nasjonalpark": {
+      "code": "3084",
+      "name": "Færder nasjonalpark",
+      "hints": [
+        "Marin nasjonalpark ytterst i Oslofjorden.",
+        "Kystlandskap med svaberg, holmer og skjær.",
+        "Rikt marint liv med tareskog, ålegress og fisk.",
+        "Kulturminner som Færder fyr og loshistorie.",
+        "Viktige hekkeområder for sjøfugl.",
+        "Populært for båt, kajakk og dykking (etter regler).",
+        "Skiftende strøm og sikt under vann.",
+        "Sårbar vegetasjon på land – ferdsel på svaberg anbefales.",
+        "Sesongvariasjoner i bruk – travelt om sommeren.",
+        "Opprettet i 2013 for å verne marint kystlandskap."
+      ]
+    },
+    "jomfruland nasjonalpark": {
+      "code": "3264",
+      "name": "Jomfruland nasjonalpark",
+      "hints": [
+        "Verner rullesteinsrygger (raet) og kystnatur utenfor Kragerø.",
+        "Rikt fugleliv – kjent fuglestasjon på øya.",
+        "Sandstrender, strandenger og grunne bukter.",
+        "Kalkrik vegetasjon med orkideer enkelte steder.",
+        "Kystkulturlandskap med beite og slått.",
+        "Varierende saltholdighet og brakkvannsområder.",
+        "Populært ferieområde – sårbar natur krever hensyn.",
+        "Merkede stier og informasjonspunkt på øya.",
+        "Tydelige spor etter istidens ra-formasjoner.",
+        "Opprettet i 2016 for å verne ra og kystøkologi."
+      ]
+    },
+    "raet nasjonalpark": {
+      "code": "3273",
+      "name": "Raet nasjonalpark",
+      "hints": [
+        "Stor marin kystpark fra Grimstad til Tvedestrand/Arendal.",
+        "Verner hovedtraseen av israndavsetningen ‘raet’.",
+        "Rikt undersjøisk liv i tareskog og ålegressenger.",
+        "Sandstrender, svaberg og skjærgård i mosaikk.",
+        "Kystkultur: los, fiske og småbruk i randsonene.",
+        "Viktige hekkeområder for sjøfugl.",
+        "Sårbar natur – ferdsel og båtbruk må skje skånsomt.",
+        "Populært for kajakk, dykking og friluftsliv.",
+        "Flere innfallsporter med info og stinett.",
+        "Opprettet i 2016 for å verne raet og kystøkosystem."
+      ]
+    },
+    "lofotodden nasjonalpark": {
+      "code": "3401",
+      "name": "Lofotodden nasjonalpark",
+      "hints": [
+        "Dramatiske kystfjell ytterst i Lofoten med stupbratte tinder.",
+        "Hvite strender, turkis hav og trange fjorder i samme landskap.",
+        "Rikt fugleliv med sjøfugl og havørn.",
+        "Kulturspor etter fiske og bosetting langt tilbake.",
+        "Sårbar kystnatur – ferdsel kanaliseres via etablerte stier.",
+        "Midnattssol om sommeren og nordlys om vinteren.",
+        "Krevende terreng: bratte stier, løse steiner og raskt skiftende vær.",
+        "Unik geologi med gamle grunnfjellsbergarter.",
+        "Innfallsporter via bl.a. Moskenesøya.",
+        "Opprettet i 2018 for å verne kystfjell og kulturspor."
+      ]
+    },
+    "forollhogna nasjonalpark": {
+      "code": "597",
+      "name": "Forollhogna nasjonalpark",
+      "hints": [
+        "Kjent for store og rolige villreinbestander.",
+        "Avrundede topper og vide daler – ‘det vennlige høyfjellet’.",
+        "Rikt seterlandskap rundt verneområdet.",
+        "Mange kulturminner knyttet til seterdrift.",
+        "Frodige beitemarker i seterdalene.",
+        "Lite strabasiøst terreng egnet for rolige turer.",
+        "Varierte blomsterenger sommerstid.",
+        "Stilleområder uten mye ferdsel.",
+        "Snørike vintre og rolig vårsmelting.",
+        "Opprettet i 2001 for å verne leveområder for villrein."
+      ]
+    },
+    "øvre anarjokka nasjonalpark": {
+      "code": "6",
+      "name": "Øvre Anarjokka nasjonalpark",
+      "hints": [
+        "Grensepark i Finnmark mot Finland – del av Anárjohka økosystem.",
+        "Store myr- og skogsområder med mange vann.",
+        "Rikt fugleliv og rovfugl i regionen.",
+        "Viktige områder for reindrift.",
+        "Lite tilrettelagt – villmarksopplevelse.",
+        "Kalde vintre og korte somre – kontinentalt preg.",
+        "Elver og bekker danner rolige dalfører.",
+        "Sårbare myrer – sporløs ferdsel nødvendig.",
+        "Få stier, lange avstander.",
+        "Opprettet i 1976 for å verne skog- og myrvillmark i nord."
+      ]
+    },
+    "stabbursdalen nasjonalpark": {
+      "code": "67",
+      "name": "Stabbursdalen nasjonalpark",
+      "hints": [
+        "Verdens nordligste furuskog i dalen ved Stabburselva.",
+        "Kontraster mellom barskog og åpne vidder.",
+        "Rikt fugleliv langs elva og myrområder.",
+        "Samer har tradisjonell bruk i området.",
+        "Klimatiske yttergrenser for furuskog.",
+        "Elvelandskap med jettegryter og stryk.",
+        "Lite tilrettelegging – rolig friluftsliv.",
+        "Midnattssol om sommeren, nordlys om vinteren.",
+        "Sårbar vegetasjon på sand og grusavsetninger.",
+        "Opprettet i 1970 for å verne nordlig furuskog."
+      ]
+    },
+    "østmarka nasjonalpark": {
+      "code": "OSTMARKA",
+      "name": "Østmarka nasjonalpark",
+      "hints": [
+        "Urbannær skogvillmark sørøst for Oslo.",
+        "Gammelskog med mye død ved og rik artsmangfold.",
+        "Myrdrag, små tjern og koller i mosaikk.",
+        "Tett stinett – men vernet område har sårbar natur.",
+        "Viktig friluftsområde for hovedstadsregionen.",
+        "Kjent for oter, bever og rik fuglefauna.",
+        "Kollskog med gran og furu – gamle trær mange steder.",
+        "Sårbarhet for slitasje – sporløs ferdsel er viktig.",
+        "God tilgjengelighet med kollektivtransport til randsoner.",
+        "Opprettet i 2024 for å verne urørt skog nær byen."
+      ]
+    },
+    "gutulia nasjonalpark": {
+      "code": "VV00000604",
+      "name": "Gutulia nasjonalpark",
+      "hints": [
+        "En av Norges minste nasjonalparker – villmark i miniatyr.",
+        "Gammel furuskog med mye død ved.",
+        "Små tjern og myrer omgitt av skogkledde koller.",
+        "Rikt fugleliv i overgang skog–myr.",
+        "Stille turterreng – få tilrettelagte stier.",
+        "Tradisjonell bruk med seterdrift i nærheten.",
+        "Vinterstid preget av kulde og tørr snø.",
+        "Geologi av gneis og granitt gir avrundede former.",
+        "Nær svenskegrensen – sammenhengende skogsmiljø.",
+        "Opprettet i 1968 for å verne naturskog."
+      ]
+    }
+  }
+}

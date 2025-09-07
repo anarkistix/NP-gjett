@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin – Nasjonalpark-polygons</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
+    <style>
+      html, body { height: 100%; margin: 0; }
+      body { font: 14px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+      header { padding: 10px; border-bottom: 1px solid #eee; display:flex; gap:10px; align-items:center; }
+      header input[type=text] { flex:1; padding:6px 8px; }
+      main { display: grid; grid-template-columns: 1fr 420px; height: calc(100% - 52px); gap:0; }
+      #editor { overflow: auto; border-right:1px solid #eee; padding: 10px; }
+      #results { position:relative; z-index:901; background:#fff; border-bottom:1px solid #eee; padding:8px 10px; }
+      #map { height: 280px; position: sticky; top:10px; margin:10px; border:1px solid #eee; border-radius:4px; }
+      .row { padding:8px 10px; border-bottom:1px solid #f3f3f3; }
+      .row strong { display:block; }
+      .row .small { color:#666; font-size:12px; }
+      .row .actions { margin-top:6px; display:flex; gap:6px; flex-wrap:wrap; }
+      .form { display:flex; gap:6px; margin-top:6px; }
+      .form input { padding:4px 6px; }
+      .form button { padding:4px 8px; }
+      .form label { min-width:140px; display:inline-block; color:#333; font-size:12px; padding-top:4px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <input id="q" type="text" placeholder="Søk park (navn/kode) …" />
+      <button id="reload">Last inn på nytt</button>
+      <span style="margin-left:auto"></span>
+      <span id="build" style="margin-left:10px; color:#555">Build: …</span>
+    </header>
+    <div id="results" style="display:none"></div>
+    <main>
+      <div id="editor"></div>
+      <div id="map"></div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js" crossorigin="anonymous"></script>
+    <script>
+      (async () => {
+        const api = 'http://127.0.0.1:8777';
+        const map = L.map('map', { zoomControl:true, preferCanvas:true }).setView([64.5, 16], 4);
+        const base = L.geoJSON(null, { style:{ color:'#333', weight:1.2, fill:false }}).addTo(map);
+        const defaultStyle = { color:'#0a7a62', weight:1.0, fill:true, fillColor:'#cfeee1', fillOpacity:0.35 };
+        const selectedStyle = { color:'#c81e1e', weight:1.6, fill:true, fillColor:'#f2c0c0', fillOpacity:0.55 };
+        const selectionLayer = L.geoJSON(null, { style: selectedStyle }).addTo(map);
+        let db = null; let features = [];
+        let groupsIndex = new Map(); // key -> { key, name, code, features:[], merged }
+
+        function onEachFeature() {}
+
+        async function loadDB() {
+          const res = await fetch(api + '/db');
+          db = await res.json();
+          features = (db.dataset && db.dataset.features) || [];
+          render();
+        }
+
+        function render() {
+          base.clearLayers();
+          const norway = features.filter(f => f.properties && f.properties.source === 'norway');
+          if (norway.length) base.addData(norway);
+          try { if (norway.length) map.fitBounds(L.geoJSON(norway).getBounds().pad(0.05)); } catch {}
+          buildGroupsIndex();
+          renderResults([]);
+        }
+
+        function buildGroupsIndex(){
+          groupsIndex.clear();
+          const parks = features.filter(f => f && f.geometry && f.properties && f.properties.source==='park');
+          const groups = new Map();
+          for (const f of parks) {
+            const key = normalizeKey(f.properties||{});
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(f);
+          }
+          for (const [key, arr] of groups.entries()) {
+            if (!arr.length) continue;
+            const rep = arr[0].properties || {};
+            const polys = [];
+            for (const g of arr) {
+              const geom = g.geometry; if (!geom) continue;
+              if (geom.type === 'Polygon') polys.push(geom.coordinates);
+              else if (geom.type === 'MultiPolygon') polys.push(...geom.coordinates);
+            }
+            let merged = arr[0];
+            if (polys.length === 1) merged = { type:'Feature', geometry:{ type:'Polygon', coordinates: polys[0] }, properties: rep };
+            else if (polys.length > 1) merged = { type:'Feature', geometry:{ type:'MultiPolygon', coordinates: polys }, properties: rep };
+            groupsIndex.set(key, { key, name: rep.name, code: rep.code, features: arr, merged });
+          }
+        }
+
+        function renderResults(items){
+          const box = document.getElementById('results');
+          if (!items || !items.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+          box.style.display = 'block';
+          box.innerHTML = items.slice(0, 12).map(it => `<div class="row" data-key="${it.key}"><strong>${it.name || 'Uten navn'}</strong> <span class="small">${it.code ? '('+it.code+')' : ''}</span></div>`).join('');
+          box.querySelectorAll('.row').forEach(row => {
+            row.addEventListener('click', ()=> selectKey(row.getAttribute('data-key'), true));
+          });
+        }
+
+        function attachRowHandlers(){}
+
+        function selectKey(key, zoom=false){
+          const entry = groupsIndex.get(key);
+          if (!entry) return;
+          selectionLayer.clearLayers();
+          selectionLayer.addData(entry.merged);
+          if (zoom) {
+            try { map.fitBounds(selectionLayer.getBounds().pad(0.2)); }
+            catch {
+              try { const c = turf.centroid(entry.merged); const [lon, lat] = c.geometry.coordinates; map.setView([lat, lon], 10); } catch {}
+            }
+          }
+          renderEditor(entry);
+        }
+
+        function normalizeKey(p) {
+          const code = p && p.code; const name = p && p.name;
+          return String(code || name || '').toLowerCase().replace(/[^a-z0-9æøå]/g,'');
+        }
+
+        function renderEditor(entry){
+          const el = document.getElementById('editor');
+          const p = (entry && entry.features && entry.features[0] && entry.features[0].properties) || {};
+          // Ta vare på opprinnelig identitet for stabil matching ved hint-lagring
+          const origName = (p.name || '').trim();
+          const origCode = (p.code || '').trim();
+          const origKey = normalizeKey(p);
+          const counties = Array.isArray(p.counties) ? p.counties.join(', ') : '';
+          const municipalities = Array.isArray(p.municipalities) ? p.municipalities.join(', ') : '';
+          el.innerHTML = `
+            <h3 style="margin:0 0 8px">Rediger park</h3>
+            <div class="form"><label for="f_name">Navn</label><input id="f_name" value="${p.name || ''}" placeholder="Navn" style="flex:1" /></div>
+            <div class="form"><label for="f_code">Kode</label><input id="f_code" value="${p.code || ''}" placeholder="Kode" style="width:160px" /></div>
+            <div class="form"><label for="f_year">Opprettelsesår</label><input id="f_year" type="number" value="${p.establishedYear || ''}" placeholder="Opprettelsesår" style="width:160px" /></div>
+            <div class="form"><label for="f_area">Areal (km²)</label><input id="f_area" type="number" step="0.1" value="${typeof p.areaKm2==='number'? p.areaKm2: ''}" placeholder="Areal (km²)" style="width:160px" /></div>
+            <div class="form"><label for="f_counties">Fylker</label><input id="f_counties" value="${counties}" placeholder="Fylker (kommadelt)" style="flex:1" /></div>
+            <div class="form"><label for="f_munis">Kommuner</label><input id="f_munis" value="${municipalities}" placeholder="Kommuner (kommadelt)" style="flex:1" /></div>
+            <div class="form"><label for="f_status">Status</label>
+              <select id="f_status">
+                <option value="approved" ${p.status==='approved'?'selected':''}>approved</option>
+                <option value="pending" ${p.status==='pending'?'selected':''}>pending</option>
+                <option value="deleted" ${p.status==='deleted'?'selected':''}>deleted</option>
+              </select>
+            </div>
+            <div class="form"><label for="f_display">Visning</label>
+              <select id="f_display">
+                <option value="yes" ${p.display!=='no'?'selected':''}>display: yes</option>
+                <option value="no" ${p.display==='no'?'selected':''}>display: no</option>
+              </select>
+            </div>
+            <hr style="margin:10px 0" />
+            <h4 style="margin:0 0 6px">Hint (ett per linje)</h4>
+            <div class="form" style="flex-direction:column; gap:4px">
+              <textarea id="f_hints" style="min-height:140px; width:100%; font:12px/1.4 monospace"></textarea>
+            </div>
+            <div class="form"><button id="f_save_all">Lagre alt</button></div>
+          `;
+          // Last eksisterende hint for parken
+          (async ()=>{
+            try {
+              const r = await fetch('http://127.0.0.1:8777/hints');
+              if (!r.ok) return;
+              const data = await r.json();
+              const parks = (data && data.parks) || {};
+              const code = origCode;
+              const name = origName;
+              let found = null;
+              if (code) {
+                for (const k of Object.keys(parks)) {
+                  const v = parks[k];
+                  if (String(v && v.code || '').trim() === code) { found = v; break; }
+                }
+              }
+              if (!found && name) {
+                const nrm = normalizeKey({ name });
+                found = parks[nrm] || null;
+                if (!found) {
+                  for (const k of Object.keys(parks)) {
+                    const v = parks[k];
+                    if (normalizeKey({ name: v && v.name || '' }) === nrm) { found = v; break; }
+                  }
+                }
+              }
+              const hints = (found && Array.isArray(found.hints)) ? found.hints : [];
+              const ta = document.getElementById('f_hints');
+              ta.value = hints.join('\n');
+            } catch {}
+          })();
+
+          document.getElementById('f_save_all').addEventListener('click', async ()=>{
+            const nameUI = document.getElementById('f_name').value.trim();
+            const codeUI = document.getElementById('f_code').value.trim();
+            const yearStr = document.getElementById('f_year').value.trim();
+            const areaStr = document.getElementById('f_area').value.trim();
+            const countiesStr = document.getElementById('f_counties').value.trim();
+            const munisStr = document.getElementById('f_munis').value.trim();
+            const status = document.getElementById('f_status').value;
+            const display = document.getElementById('f_display').value;
+            const year = yearStr ? Number(yearStr) : undefined;
+            const areaKm2 = areaStr ? Number(areaStr) : undefined;
+            const countiesArr = countiesStr ? countiesStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
+            const munisArr = munisStr ? munisStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
+            const rawHints = document.getElementById('f_hints').value;
+            const hints = String(rawHints||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+
+            // 1) Lagre hint med stabilt originalt key, men oppdatere til nye navn/koder
+            try {
+              await fetch('http://127.0.0.1:8777/save-hints', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name: nameUI, code: codeUI, key: origKey, hints }) });
+            } catch(e) { console.warn('save-hints feilet', e); }
+
+            // 2) Oppdater metadata på alle medlems-features og lagre databasen
+            for (const f of entry.features) {
+              const pr = f.properties || (f.properties = {});
+              if (nameUI) pr.name = nameUI; else delete pr.name;
+              if (codeUI) pr.code = codeUI; else delete pr.code;
+              if (year) pr.establishedYear = year; else delete pr.establishedYear;
+              if (!Number.isNaN(areaKm2)) pr.areaKm2 = areaKm2;
+              pr.counties = countiesArr;
+              pr.municipalities = munisArr;
+              pr.status = status;
+              pr.display = display;
+            }
+            try {
+              await fetch(api + '/save-db', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(db) });
+            } catch (e) { console.warn('save-db feilet', e); }
+
+            // 3) Rebygg og re-velg (bruk nye felter for nøkkel)
+            buildGroupsIndex();
+            const newKey = normalizeKey({ name: nameUI, code: codeUI });
+            selectKey(newKey || entry.key, false);
+          });
+        }
+
+        function runAnalysis(){}
+
+        function renderAnalysis(){}
+
+        document.getElementById('q').addEventListener('input', ()=> {
+          const q = document.getElementById('q').value.toLowerCase().trim();
+          if (!q) { renderResults([]); return; }
+          const items = Array.from(groupsIndex.values()).filter(it => String(it.name||'').toLowerCase().includes(q) || String(it.code||'').toLowerCase().includes(q));
+          renderResults(items);
+        });
+        document.getElementById('q').addEventListener('keydown', (e)=>{
+          if (e.key === 'Enter') {
+            const q = document.getElementById('q').value.toLowerCase().trim();
+            const items = Array.from(groupsIndex.values()).filter(it => String(it.name||'').toLowerCase().includes(q) || String(it.code||'').toLowerCase().includes(q));
+            if (items.length) { selectKey(items[0].key, true); renderResults([]); }
+          }
+        });
+        document.getElementById('reload').addEventListener('click', loadDB);
+        // createPark fjernet i denne visningen
+
+        // analyse-funksjonalitet ikke eksponert i denne admin-visningen
+
+        await loadDB();
+        // vis build
+        try {
+          const b = await fetch('build_version.json?ts=' + Date.now());
+          if (b.ok) {
+            const v = await b.json();
+            const el = document.getElementById('build');
+            if (el && v && v.build) el.textContent = 'Build: ' + v.build;
+          }
+        } catch {}
+      })().catch(e => console.error(e));
+    </script>
+  </body>
+</html>

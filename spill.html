@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Nasjonalpark-spill</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
+    <style>
+      html, body { height: 100%; margin: 0; background:#fff; }
+      body { font: 14px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+      #map { position: absolute; inset: 0; }
+      .hud { position:absolute; top:8px; left:8px; z-index:900; background:rgba(255,255,255,0.92); border:1px solid #ddd; border-radius:6px; padding:6px 8px; font-size:12px; }
+      .topbar { position:absolute; top:8px; right:8px; z-index:900; display:flex; gap:6px; }
+      .btn { background:#0a7a62; color:#fff; border:none; border-radius:6px; padding:8px 10px; font-size:14px; }
+      .btn:active { transform: scale(0.98); }
+      #hint { position:absolute; top:48px; left:8px; right:8px; z-index:900; background:rgba(255,255,255,0.95); border:1px solid #ddd; border-radius:8px; padding:10px; font-size:14px; line-height:1.35; max-height:38vh; overflow:auto; }
+      .scorebar { position:absolute; top:8px; right:8px; z-index:905; display:flex; gap:6px; }
+      .score, .timer { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:6px; padding:6px 8px; font: bold 13px monospace; letter-spacing:1px; text-shadow:0 0 4px #00ff88; }
+      #guessBar { position:absolute; bottom:0; left:0; right:0; z-index:900; background:rgba(255,255,255,0.98); border-top:1px solid #ddd; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); }
+      #choices { display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
+      .choiceBtn { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:6px; padding:10px 12px; font: bold 13px monospace; letter-spacing:1px; text-shadow:0 0 4px #00ff88; }
+      .choiceBtn:active { transform: scale(0.98); }
+      .choiceBtn.correct { background:#111; border-color:#00ff88; color:#00ff88; text-shadow:0 0 6px #00ff88; }
+      .choiceBtn.wrong { background:#111; border-color:#ff6b6b; color:#ff6b6b; text-shadow:0 0 4px #ff6b6b; }
+      .choiceBtn:disabled, .choiceBtn.disabled { background:#e9e9e9; color:#9a9a9a; border-color:#c8c8c8; text-shadow:none; }
+      #winOverlay { position:absolute; inset:0; z-index:1000; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.5); }
+      .winContent { background:#111; border:2px solid #00ff88; border-radius:10px; padding:20px 24px; text-align:center; color:#00ff88; font: bold 28px monospace; letter-spacing:2px; text-shadow:0 0 6px #00ff88; }
+      .winContent .btn { margin-top:12px; font-size:16px; }
+      #correctOverlay { position:absolute; inset:0; z-index:1100; display:none; align-items:center; justify-content:center; pointer-events:none; }
+      #correctOverlay .msg { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:16px 20px; font: bold 36px monospace; letter-spacing:2px; text-shadow:0 0 6px #00ff88; }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div class="hud" id="build">Build: …</div>
+    <div class="topbar">
+      <button class="btn" id="nyRunde">Ny runde</button>
+    </div>
+    <div class="scorebar"><div class="timer" id="timer">TIME 00:00</div><div class="score" id="score">SCORE 01000</div></div>
+    <div id="hint" style="display:none"></div>
+    <div id="guessBar"><div id="choices"></div></div>
+    <div id="winOverlay"><div class="winContent"><div>VINNER</div><button id="startNytt" class="btn">Start på nytt</button></div></div>
+    <div id="correctOverlay"><div class="msg">KORREKT</div></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js" crossorigin="anonymous"></script>
+    <script>
+      (async () => {
+        const map = L.map('map', { zoomControl: false, preferCanvas:true });
+        const norwayStyle = { color:'#111', weight:1.2, fill:false };
+        const parkStyle = { color:'#0a7a62', weight:1.0, fill:true, fillColor:'#cfeee1', fillOpacity:0.35 };
+        const selectedStyle = { color:'#222', weight:1.6, fill:true, fillColor:'#555', fillOpacity:0.45 };
+        const norwayLayer = L.geoJSON(null, { style: norwayStyle }).addTo(map);
+        const parksLayer = L.geoJSON(null, { style: parkStyle }).addTo(map);
+        const focusLayer = L.geoJSON(null, { style: selectedStyle }).addTo(map);
+        const hintEl = document.getElementById('hint');
+        const scoreEl = document.getElementById('score');
+        const winOverlay = document.getElementById('winOverlay');
+        const startNyttBtn = document.getElementById('startNytt');
+        const correctOverlay = document.getElementById('correctOverlay');
+        const timerEl = document.getElementById('timer');
+
+        // Build badge
+        try {
+          const b = await fetch('build_version.json?ts=' + Date.now());
+          if (b.ok) { const v = await b.json(); const el = document.getElementById('build'); if (el && v && v.build) el.textContent = 'Build: ' + v.build; }
+        } catch {}
+
+        // Load outline and db
+        const [gjRes, dbRes, hintsRes] = await Promise.all([
+          fetch('norway_outline_full.json?ts=' + Date.now()),
+          fetch('np_database.json?ts=' + Date.now()),
+          fetch('park_hints.json?ts=' + Date.now())
+        ]);
+        if (!gjRes.ok) throw new Error('Klarte ikke å hente norway_outline_full.json');
+        if (!dbRes.ok) throw new Error('Klarte ikke å hente np_database.json');
+        const outline = await gjRes.json();
+        const db = await dbRes.json();
+        const hintsData = hintsRes.ok ? await hintsRes.json() : { parks: {} };
+        // Score (retro)
+        let score = 1000;
+        function renderScore(){
+          try { scoreEl.textContent = 'SCORE ' + String(Math.max(0, Math.floor(score))).padStart(5, '0'); } catch {}
+        }
+        renderScore();
+        // Timer
+        let timerHandle = null; let timerStartMs = 0;
+        function formatTime(ms){ const t=Math.floor(ms/1000); const mm=String(Math.floor(t/60)).padStart(2,'0'); const ss=String(t%60).padStart(2,'0'); return mm+':'+ss; }
+        function resetTimer(){ timerStartMs = Date.now(); if (timerEl) timerEl.textContent = 'TIME 00:00'; }
+        function startTimer(){ stopTimer(); resetTimer(); timerHandle = setInterval(()=>{ const e=Date.now()-timerStartMs; if (timerEl) timerEl.textContent='TIME '+formatTime(e); }, 1000); }
+        function stopTimer(){ if (timerHandle) { clearInterval(timerHandle); timerHandle = null; } }
+
+        norwayLayer.addData(outline);
+        try { map.fitBounds(norwayLayer.getBounds().pad(0.05)); } catch { map.setView([64.5, 16], 4); }
+
+        const feats = (db && db.dataset && Array.isArray(db.dataset.features)) ? db.dataset.features : [];
+        const parks = feats.filter(f => f && f.geometry && f.properties && f.properties.source==='park' && f.properties.status!=='deleted' && f.properties.display !== 'no');
+
+        function normalizeKey(p) {
+          const code = p && p.code; const name = p && p.name;
+          return String(code || name || '').toLowerCase().replace(/[^a-z0-9æøå]/g,'');
+        }
+
+        // Build merged features per park
+        const groups = new Map();
+        for (const f of parks) {
+          const key = normalizeKey(f.properties);
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(f);
+        }
+        const merged = [];
+        for (const [key, arr] of groups.entries()) {
+          const polys = []; const rep = arr[0].properties || {};
+          for (const g of arr) {
+            const geom = g.geometry; if (!geom) continue;
+            if (geom.type === 'Polygon') polys.push(geom.coordinates);
+            else if (geom.type === 'MultiPolygon') polys.push(...geom.coordinates);
+          }
+          if (!polys.length) continue;
+          const geom = polys.length===1 ? { type:'Polygon', coordinates: polys[0] } : { type:'MultiPolygon', coordinates: polys };
+          merged.push({ type:'Feature', properties:{ name: rep.name, code: rep.code, key }, geometry: geom });
+        }
+        parksLayer.addData({ type:'FeatureCollection', features: merged });
+
+        // Hjelpere for flervalg
+        function labelForPark(p){ const name = (p && p.name) || ''; return name; }
+        function shuffle(arr){ for (let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+        function pickOtherParks(excludeKey, count){
+          const pool = merged.filter(f => f.properties && f.properties.key !== excludeKey);
+          const out = [];
+          const seen = new Set();
+          while (out.length < Math.min(count, pool.length)){
+            const cand = pool[Math.floor(Math.random()*pool.length)];
+            const k = cand.properties && cand.properties.key;
+            if (k && !seen.has(k)) { seen.add(k); out.push(cand); }
+          }
+          return out;
+        }
+        function renderChoicesForCurrent(){
+          const container = document.getElementById('choices');
+          if (!current || !container) return;
+          const correctKey = current.properties.key;
+          const opts = [current, ...pickOtherParks(correctKey, 4)].slice(0,5);
+          const shuffled = shuffle(opts.slice());
+          container.innerHTML = shuffled.map(p => `<button class="choiceBtn" data-key="${p.properties.key}">${labelForPark(p.properties)}</button>`).join('');
+          container.querySelectorAll('.choiceBtn').forEach(btn => {
+            btn.addEventListener('click', ()=>{
+              const k = btn.getAttribute('data-key');
+              if (k === correctKey){
+                btn.classList.add('correct');
+                stopTimer();
+                if (correctOverlay) {
+                  correctOverlay.style.display = 'flex';
+                  setTimeout(()=>{ correctOverlay.style.display = 'none'; startRound(); }, 1000);
+                } else {
+                  setTimeout(()=>{ startRound(); }, 1000);
+                }
+              } else {
+                btn.classList.add('wrong');
+                btn.disabled = true; btn.classList.add('disabled');
+                // Neste hint ved feil
+                if (hintIndex < currentHints.length-1) { hintIndex += 1; showHint(hintIndex); }
+              }
+            });
+          });
+        }
+
+        function pickRandomPark() {
+          if (!merged.length) return null;
+          const idx = Math.floor(Math.random() * merged.length);
+          return merged[idx];
+        }
+
+        function getHintsFor(p) {
+          const parks = (hintsData && hintsData.parks) || {};
+          const code = String((p && p.code) || '').trim();
+          const name = String((p && p.name) || '').trim().toLowerCase();
+          let entry = null;
+          if (code) {
+            for (const k of Object.keys(parks)) { const v = parks[k]; if (String(v && v.code || '').trim() === code) { entry = v; break; } }
+          }
+          if (!entry && name) {
+            entry = parks[name] || null;
+            if (!entry) {
+              for (const k of Object.keys(parks)) { const v = parks[k]; const vn = String(v && v.name || '').trim().toLowerCase(); if (vn && vn === name) { entry = v; break; } }
+            }
+          }
+          const list = (entry && Array.isArray(entry.hints)) ? entry.hints : [];
+          return list;
+        }
+
+        function normalizeText(s) {
+          try {
+            return String(s || '')
+              .toLowerCase()
+              .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+              .replace(/[æÆ]/g,'ae').replace(/[øØ]/g,'o').replace(/[åÅ]/g,'a')
+              .replace(/[^a-z0-9\(\)\-\s]/g,'')
+              .trim();
+          } catch { return String(s || '').toLowerCase().trim(); }
+        }
+
+        let current = null;
+        let currentHints = [];
+        let hintIndex = 0;
+
+        function showHint(idx){
+          if (!currentHints.length) { hintEl.style.display='none'; hintEl.textContent=''; return; }
+          const i = Math.min(idx, currentHints.length-1);
+          hintEl.innerHTML = `<strong>Hint ${i+1}:</strong> ${currentHints[i]}`;
+          hintEl.style.display = 'block';
+        }
+
+        async function startRound() {
+          focusLayer.clearLayers();
+          hintEl.style.display = 'none'; hintEl.textContent = '';
+          if (winOverlay) winOverlay.style.display = 'none';
+          if (correctOverlay) correctOverlay.style.display = 'none';
+          const park = pickRandomPark();
+          if (!park) return;
+          current = park;
+          currentHints = getHintsFor(park.properties) || [];
+          hintIndex = 0;
+          focusLayer.addData(park);
+          startTimer();
+          // Zoom så parken tar ca 50% av høyden: bruk padding rundt bounds
+          try {
+            const b = focusLayer.getBounds();
+            const padded = L.latLngBounds(
+              [ b.getSouth() - (b.getNorth()-b.getSouth())*0.5, b.getWest() - (b.getEast()-b.getWest())*0.5 ],
+              [ b.getNorth() + (b.getNorth()-b.getSouth())*0.5, b.getEast() + (b.getEast()-b.getWest())*0.5 ]
+            );
+            map.fitBounds(padded, { animate: true });
+          } catch {}
+          if (currentHints.length) { showHint(0); }
+          // Bygg flervalg
+          renderChoicesForCurrent();
+        }
+
+        document.getElementById('nyRunde').addEventListener('click', startRound);
+
+        if (startNyttBtn) startNyttBtn.addEventListener('click', ()=>{
+          winOverlay.style.display = 'none';
+          startRound();
+        });
+
+        // Start automatisk
+        startRound();
+      })().catch(e => {
+        const el = document.createElement('div');
+        el.className = 'hud'; el.textContent = 'Feil: ' + (e && e.message || e);
+        document.body.appendChild(el);
+        console.error(e);
+      });
+    </script>
+  </body>
+  </html>
+
+

@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Norges omriss med nasjonalparker</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin="anonymous"
+    />
+    <style>
+      html, body { height: 100%; margin: 0; }
+      #map { height: 100%; width: 100%; background: #ffffff; }
+      .controls {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        z-index: 1200;
+        display: flex;
+        gap: 8px;
+      }
+      .controls button {
+        padding: 6px 10px;
+        font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        border: 1px solid #bbb;
+        border-radius: 4px;
+        background: #fff;
+        cursor: pointer;
+      }
+      .controls button:hover { background: #f5f5f5; }
+      .report {
+        position: absolute;
+        top: 52px;
+        right: 12px;
+        z-index: 1200;
+        max-width: 360px;
+        max-height: 65vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 8px 10px;
+        background: rgba(255,255,255,0.95);
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        color: #222;
+        display: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      .report h4 { margin: 0 0 6px 0; font-size: 13px; }
+      .report ul { list-style: none; padding: 0; margin: 0; }
+      .report li { margin: 6px 0; }
+      .report .small { color: #555; }
+      .legend {
+        position: absolute;
+        bottom: 14px;
+        left: 10px;
+        padding: 8px 10px;
+        background: rgba(255,255,255,0.9);
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        color: #222;
+      }
+      .loadStatus {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        z-index: 1300;
+        padding: 6px 8px;
+        background: rgba(0,0,0,0.65);
+        color: #fff;
+        border-radius: 4px;
+        font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        display: none;
+        pointer-events: none; /* skal ikke blokkere zoom/pan */
+      }
+      .legend div { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+      .legend .swatch { width: 18px; height: 0; border-top: 3px solid transparent; }
+      .legend .swatch.norway { border-color: #222; }
+      .legend .swatch.parks { border-color: #0a7a62; border-style: dashed; }
+    </style>
+  </head>
+  <body>
+    <div id="map">
+      <div class="controls">
+        <button id="downloadJson">Åpne visning</button>
+        <button id="downloadParksDb">Last ned park-database</button>
+        <button id="analyzeOutliers">Analyser avvik</button>
+      </div>
+      <div id="report" class="report"></div>
+      <div id="loadStatus" class="loadStatus">Laster: 0%</div>
+    </div>
+    <div class="legend" aria-hidden="true">
+      <div><span class="swatch norway"></span><span>Norge omriss</span></div>
+      <div><span class="swatch parks"></span><span>Nasjonalparker</span></div>
+    </div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js" crossorigin="anonymous"></script>
+    
+    <script>
+      (async () => {
+        const map = L.map('map', {
+          zoomControl: true,
+          attributionControl: true,
+          preferCanvas: true,
+        });
+
+        // Plasser egne knapper som en ekte Leaflet-kontroll (sikrer synlighet)
+        try {
+          const Controls = L.Control.extend({
+            options: { position: 'topright' },
+            onAdd: function () {
+              const el = document.querySelector('.controls');
+              if (el) {
+                el.classList.add('leaflet-control');
+                return el;
+              }
+              const fallback = L.DomUtil.create('div', 'leaflet-control');
+              fallback.textContent = 'Kontroller';
+              return fallback;
+            }
+          });
+          new Controls().addTo(map);
+        } catch (e) { console.warn('Klarte ikke å legge til Leaflet-kontroll for knapper', e); }
+
+        // Hindre at kartet fanger scroll/drag når du scroller i rapporten eller klikker på kontroller
+        try {
+          const reportEl = document.getElementById('report');
+          if (reportEl) {
+            L.DomEvent.disableScrollPropagation(reportEl);
+            L.DomEvent.disableClickPropagation(reportEl);
+          }
+          const controlsEl = document.querySelector('.controls');
+          if (controlsEl) {
+            L.DomEvent.disableClickPropagation(controlsEl);
+          }
+        } catch (e) { console.warn('Kunne ikke sette opp scroll/click-propagation', e); }
+
+        // Ingen bakgrunnslag – kun omriss og nasjonalparker
+
+        const allBounds = L.latLngBounds([]);
+        // Sammenslåtte lag for ytelse (unngå ett L.geoJSON per feature)
+        const norwayGroup = L.geoJSON(null, {
+          style: () => norwayStyle,
+        }).addTo(map);
+        const parksGroup = L.geoJSON(null, {
+          style: (feature) => styleFor(feature?.properties?.source, feature?.properties?.status),
+          onEachFeature: (feature, layer) => {
+            const id = feature?.properties?.id;
+            if (id != null) layersById.set(id, layer);
+            attachPopup(layer, feature);
+            try { allBounds.extend(layer.getBounds()); } catch (_) {}
+          },
+        }).addTo(map);
+
+        // Stiler
+        const norwayStyle = {
+          color: '#222',
+          weight: 2,
+          opacity: 1,
+          fill: false,
+        };
+
+        const pendingParkStyle = {
+          color: '#d07700',
+          weight: 1.5,
+          opacity: 1,
+          fillOpacity: 0,
+          dashArray: '6 3',
+        };
+        const approvedStyle = {
+          color: '#0a7a62',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0,
+        };
+
+        // Redigerings-state og hjelpefunksjoner
+        const editState = { type: 'FeatureCollection', features: [] };
+        const layersById = new Map();
+        let nextId = 1;
+
+        // Persistens av status (over lever refresh): uid -> { status, updatedAt }
+        const STORAGE_KEY = 'np_status_v1';
+        const DATASET_KEY = 'np_dataset_latest';
+        const PROGRESS_KEY = 'np_load_progress';
+        let loadedFromDb = false;
+        let isBatchLoading = false;
+        function loadPersisted() {
+          try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch (_) { return {}; }
+        }
+        function savePersisted(map) {
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(map)); } catch (_) {}
+        }
+        let persistedStatus = loadPersisted();
+
+        function saveDataset() {
+          try { localStorage.setItem(DATASET_KEY, JSON.stringify(editState)); } catch (_) {}
+        }
+        function setProgress(p) {
+          const val = String(Math.max(0, Math.min(100, Math.round(p))));
+          try { localStorage.setItem(PROGRESS_KEY, val); } catch (_) {}
+          try {
+            const el = document.getElementById('loadStatus');
+            if (el) {
+              el.style.display = 'block';
+              el.textContent = 'Laster: ' + val + '%';
+              if (Number(val) >= 100) {
+                setTimeout(() => { el.style.display = 'none'; }, 800);
+              }
+            }
+          } catch (_) {}
+        }
+        // Init progress
+        setProgress(1);
+        // Lagre tom dataset tidlig slik at viewer kan koble seg på
+        saveDataset();
+
+        function styleFor(source, status) {
+          if (status === 'approved') return approvedStyle;
+          if (source === 'norway') return norwayStyle;
+          return pendingParkStyle;
+        }
+
+        function makePopupHtml(feature) {
+          const name = feature.properties && feature.properties.name ? feature.properties.name : (feature.properties.source === 'norway' ? 'Norge' : 'Nasjonalpark');
+          const code = feature.properties && feature.properties.code ? ` (${feature.properties.code})` : '';
+          const pts = feature.properties && typeof feature.properties.vertexCount === 'number' ? feature.properties.vertexCount : '–';
+          const len = feature.properties && typeof feature.properties.perimeterKm === 'number' ? feature.properties.perimeterKm.toFixed(2) + ' km' : '–';
+          return `<div style="min-width:200px">
+            <div style="margin-bottom:6px; font-weight:600">${name}${code}</div>
+            <div style="margin:6px 0 8px 0; font-size:12px; color:#444">Punkter: ${pts} • Lengde: ${len}</div>
+            <div style="display:flex; gap:6px">
+              <button data-action="approve" data-id="${feature.properties.id}">Godkjenn</button>
+              <button data-action="delete" data-id="${feature.properties.id}">Slett</button>
+            </div>
+          </div>`;
+        }
+
+        function ensureComputed(feature) {
+          // Beregn manglende metrikker/uid on-demand (unngå tung init for store datasett)
+          if (typeof feature?.properties?.vertexCount !== 'number') {
+            feature.properties.vertexCount = computeVertexCount(feature.geometry);
+          }
+          if (typeof feature?.properties?.perimeterKm !== 'number') {
+            feature.properties.perimeterKm = computePerimeterKm(feature.geometry);
+          }
+          if (!feature.properties.uid) {
+            feature.properties.uid = computeUid(feature.geometry, feature.properties);
+          }
+        }
+
+        function attachPopup(layer, feature) {
+          if (feature.properties && feature.properties.source === 'park') {
+            // Lag popup først, beregn metrikker når den åpnes
+            layer.bindPopup(makePopupHtml(feature));
+            layer.on('popupopen', (e) => {
+              try {
+                ensureComputed(feature);
+                e.popup.setContent(makePopupHtml(feature));
+              } catch (_) {}
+              const container = e.popup.getElement();
+              const approveBtn = container.querySelector('button[data-action="approve"]');
+              const deleteBtn = container.querySelector('button[data-action="delete"]');
+              if (approveBtn) approveBtn.onclick = () => updateFeatureStatus(feature.properties.id, 'approved');
+              if (deleteBtn) deleteBtn.onclick = () => updateFeatureStatus(feature.properties.id, 'deleted');
+            });
+          }
+        }
+
+        function computeUid(geometry, properties) {
+          // Stabil UID basert på kilde, kode/navn, centroid (avrundet) og antall punkter
+          let key = String(properties && (properties.code || properties.name || ''))
+            .toLowerCase().replace(/\s+/g, ' ').trim();
+          let src = String(properties && properties.source || '');
+          let v = computeVertexCount(geometry);
+          try {
+            const c = turf.centroid(geometry);
+            const [lon, lat] = c.geometry.coordinates;
+            const clat = Number(lat).toFixed(5);
+            const clon = Number(lon).toFixed(5);
+            return `${src}:${key}:${clat},${clon}:${v}`;
+          } catch (_) {
+            return `${src}:${key}:0,0:${v}`;
+          }
+        }
+
+        function computeVertexCount(geometry) {
+          if (!geometry) return 0;
+          if (geometry.type === 'Polygon') {
+            let count = 0;
+            for (const ring of geometry.coordinates) {
+              // Ikke tell duplisert siste punkt som lukker ringen
+              count += Math.max(0, ring.length - 1);
+            }
+            return count;
+          }
+          if (geometry.type === 'MultiPolygon') {
+            let total = 0;
+            for (const poly of geometry.coordinates) {
+              for (const ring of poly) total += Math.max(0, ring.length - 1);
+            }
+            return total;
+          }
+          return 0;
+        }
+
+        function computePerimeterKm(geometry) {
+          try {
+            if (!geometry) return 0;
+            if (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') {
+              const line = turf.polygonToLine(geometry);
+              return turf.length(line, { units: 'kilometers' });
+            }
+          } catch (_) {}
+          return 0;
+        }
+
+        function addFeatureToMap(geometry, properties) {
+          const id = nextId++;
+          const skip = !!properties._skipCompute; // marker for hurtig lasting fra DB
+          // Beregn tungt kun hvis ikke skip
+          const vertexCount = skip ? undefined : computeVertexCount(geometry);
+          const perimeterKm = skip ? undefined : computePerimeterKm(geometry);
+          const uid = skip ? undefined : computeUid(geometry, properties);
+          let status = properties.status || 'pending';
+          if (!skip) {
+            const persisted = persistedStatus[uid];
+            status = (persisted && persisted.status) || status;
+          }
+          const cleanProps = { ...properties };
+          delete cleanProps._skipCompute;
+          const feature = { type: 'Feature', properties: { ...cleanProps, id, uid, status, vertexCount, perimeterKm }, geometry };
+          editState.features.push(feature);
+          if (feature.properties.status !== 'deleted') {
+            if (feature.properties.source === 'norway') {
+              norwayGroup.addData(feature);
+            } else {
+              parksGroup.addData(feature);
+            }
+          }
+          // Oppdater dataset etter hvert tillegg (men ikke midt i batch-innlasting)
+          if (!isBatchLoading) saveDataset();
+        }
+
+        function updateFeatureStatus(id, status) {
+          const idx = editState.features.findIndex(f => f.properties && f.properties.id === id);
+          if (idx === -1) return;
+          const f = editState.features[idx];
+          f.properties.status = status;
+          // Oppdater persistens
+          if (f.properties && f.properties.uid) {
+            persistedStatus[f.properties.uid] = { status, updatedAt: new Date().toISOString() };
+            savePersisted(persistedStatus);
+          }
+          const layerGroup = layersById.get(id);
+          if (status === 'deleted') {
+            if (layerGroup) { try { parksGroup.removeLayer(layerGroup); map.removeLayer(layerGroup); } catch (_) {} }
+            layersById.delete(id);
+          } else {
+            if (layerGroup) {
+              try { layerGroup.setStyle(styleFor(f.properties.source, status)); } catch (_) {}
+            }
+          }
+          saveDataset();
+        }
+
+        function setParkStatusByCode(code, status) {
+          for (const f of editState.features) {
+            if (f.properties && f.properties.source === 'park' && String(f.properties.code || '') === String(code)) {
+              updateFeatureStatus(f.properties.id, status);
+            }
+          }
+        }
+
+        function openViewer() {
+          try {
+            localStorage.setItem('np_dataset_latest', JSON.stringify(editState));
+          } catch (_) {}
+          window.open('viewer.html', '_blank');
+        }
+        document.getElementById('downloadJson').addEventListener('click', openViewer);
+
+        // Hjelper: batch-add for store lister
+        async function batchAddFeatures(feats, progressBase = 0, progressSpan = 50) {
+          return new Promise((resolve) => {
+            const BATCH = 200;
+            let i = 0;
+            isBatchLoading = true;
+            function step() {
+              const end = Math.min(i + BATCH, feats.length);
+              for (; i < end; i++) {
+                const f = feats[i];
+                if (!f || !f.geometry) continue;
+                const props = { ...(f.properties || {}), _skipCompute: true };
+                addFeatureToMap(f.geometry, props);
+              }
+              const pct = feats.length ? Math.round((i / feats.length) * progressSpan) : progressSpan;
+              setProgress(progressBase + pct);
+              if (i < feats.length) {
+                setTimeout(step, 0);
+              } else {
+                isBatchLoading = false;
+                try { saveDataset(); } catch (_) {}
+                resolve();
+              }
+            }
+            step();
+          });
+        }
+
+        // 1) Last Norge – bruk detaljert WGS84-omriss for korrekt visning
+        try {
+          const noRes = await fetch('norway_outline_wgs84.json?ts=' + Date.now());
+          if (noRes.ok) {
+            const noFc = await noRes.json();
+            let fc;
+            if (noFc && Array.isArray(noFc.features)) {
+              fc = {
+                type: 'FeatureCollection',
+                features: noFc.features.map(f => ({ type: 'Feature', geometry: f.geometry, properties: { ...(f.properties||{}), source:'norway', name:'Norge', status:'approved' } }))
+              };
+            } else if (noFc && noFc.type === 'GeometryCollection' && Array.isArray(noFc.geometries)) {
+              fc = { type:'FeatureCollection', features: noFc.geometries.map(g => ({ type:'Feature', geometry:g, properties:{ source:'norway', name:'Norge', status:'approved' } })) };
+            } else {
+              fc = { type:'FeatureCollection', features: [ { type:'Feature', geometry: (noFc.geometry||noFc), properties:{ source:'norway', name:'Norge', status:'approved' } } ] };
+            }
+            norwayGroup.addData(fc);
+            try { allBounds.extend(norwayGroup.getBounds()); } catch (_) {}
+            setProgress(100);
+            loadedFromDb = true;
+          }
+        } catch (e) { console.warn('Kunne ikke laste norway_outline.json', e); }
+
+        // Midlertidig: ikke last parker før Norge vises perfekt
+        try {
+          if (allBounds.isValid()) {
+            map.fitBounds(allBounds.pad(0.05));
+          } else {
+            map.setView([64.5, 16], 5);
+          }
+          setProgress(100);
+        } catch (_) { setProgress(100); }
+
+        // Bygg offisiell park-database fra Wikipedia
+        async function buildParksDb() {
+          // Wikipedia API: hent HTML og parse (enkelt)
+          // Bruker action=parse på artikkelen
+          const api = 'https://no.wikipedia.org/w/api.php?action=parse&format=json&page=Liste_over_nasjonalparker_i_Norge&prop=text&origin=*';
+          const res = await fetch(api);
+          if (!res.ok) throw new Error('Kunne ikke hente Wikipedia-lista');
+          const data = await res.json();
+          const html = data && data.parse && data.parse.text && data.parse.text['*'];
+          if (!html) throw new Error('Uventet Wikipedia-respons');
+
+          // Lag et DOM-tre og finn hovedtabellen (første <table> etter overskrift)
+          const tmp = document.createElement('div');
+          tmp.innerHTML = html;
+          const tables = tmp.querySelectorAll('table');
+          let mainTable = null;
+          for (const t of tables) { if (t.querySelector('th')) { mainTable = t; break; } }
+          if (!mainTable) throw new Error('Fant ikke tabell i Wikipedia-siden');
+
+          // Parse rader: prøv å hente navn, lenke, opprettet, areal, fylker, koordinater
+          const parksDb = [];
+          const rows = mainTable.querySelectorAll('tr');
+          for (let i = 1; i < rows.length; i++) {
+            const cells = rows[i].querySelectorAll('td, th');
+            if (cells.length < 3) continue;
+            const nameCell = cells[0];
+            const link = nameCell.querySelector('a');
+            const name = (link && link.textContent.trim()) || nameCell.textContent.trim();
+            if (!name) continue;
+            const href = link ? ('https://no.wikipedia.org' + link.getAttribute('href')) : undefined;
+
+            // Heuristikker for kolonner
+            const created = cells[2] ? cells[2].textContent.trim() : '';
+            const area = cells[3] ? cells[3].textContent.trim() : '';
+            const region = cells[5] ? cells[5].textContent.trim() : '';
+            const coords = (cells[6] ? cells[6].textContent.trim() : '').replace(/\s+/g, ' ');
+
+            parksDb.push({
+              name,
+              wikipedia: href,
+              created,
+              areaRaw: area,
+              region,
+              coordsRaw: coords,
+            });
+          }
+          return parksDb;
+        }
+
+        function downloadParksDbFile(parksDb) {
+          const blob = new Blob([JSON.stringify({ generatedAt: new Date().toISOString(), parks: parksDb }, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'nasjonalparker_offisiell_db.json';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+
+        async function onDownloadParksDb() {
+          try {
+            const parksDb = await buildParksDb();
+            downloadParksDbFile(parksDb);
+          } catch (e) {
+            console.error(e);
+            alert('Klarte ikke å bygge park-database. Se konsollen.');
+          }
+        }
+        document.getElementById('downloadParksDb').addEventListener('click', onDownloadParksDb);
+
+        // Match park-features i editState mot offisiell database ved navn (enkelt normalisert)
+        function normalizeName(s) {
+          return String(s || '').toLowerCase().replace(/[^a-zæøå0-9]/g, '');
+        }
+
+        function groupFeaturesByPark() {
+          const groups = new Map();
+          for (const f of editState.features) {
+            if (f.properties && f.properties.source === 'park' && f.properties.status !== 'deleted') {
+              const key = normalizeName(f.properties.name || f.properties.code || '');
+              if (!groups.has(key)) groups.set(key, []);
+              groups.get(key).push(f);
+            }
+          }
+          return groups;
+        }
+
+        function polygonAreaKm2(geom) {
+          try { return turf.area(geom) / 1e6; } catch (_) { return 0; }
+        }
+        function polygonCentroid(geom) {
+          try { return turf.centroid(geom); } catch (_) { return null; }
+        }
+        function centroidDistanceKm(a, b) {
+          try { return turf.distance(a, b, { units: 'kilometers' }); } catch (_) { return Infinity; }
+        }
+
+        async function analyzeOutliers() {
+          // 1) Bygg offisiell DB
+          let parksDb = [];
+          try { parksDb = await buildParksDb(); } catch (e) { console.warn('DB feilet, fortsetter uten:', e); }
+
+          // 2) Matchering (navn-normalisering)
+          const dbByName = new Map();
+          for (const p of parksDb) dbByName.set(normalizeName(p.name), p);
+
+          // 3) Finn per park: største polygon (areal), og flagg avvik langt unna
+          const groups = groupFeaturesByPark();
+          const reportItems = [];
+          for (const [key, feats] of groups.entries()) {
+            if (!feats.length) continue;
+            // største
+            let main = feats[0];
+            let mainArea = polygonAreaKm2(main.geometry);
+            for (const f of feats) {
+              const a = polygonAreaKm2(f.geometry);
+              if (a > mainArea) { main = f; mainArea = a; }
+            }
+            const mainCentroid = polygonCentroid(main.geometry);
+            if (!mainCentroid) continue;
+            const db = dbByName.get(key);
+            const niceName = (db && db.name) || (feats[0].properties && feats[0].properties.name) || 'Ukjent';
+
+            for (const f of feats) {
+              if (f === main) continue;
+              const c = polygonCentroid(f.geometry);
+              if (!c) continue;
+              const distKm = centroidDistanceKm(mainCentroid, c);
+              // Heuristikk: avvik hvis > 15 km fra hovedpolygon (kan justeres)
+              if (distKm > 15) {
+                reportItems.push({
+                  parkKey: key,
+                  parkName: niceName,
+                  featureId: f.properties.id,
+                  distanceKm: distKm,
+                  areaKm2: polygonAreaKm2(f.geometry),
+                });
+              }
+            }
+          }
+
+          // 4) Vis rapport
+          const reportEl = document.getElementById('report');
+          if (!reportItems.length) {
+            reportEl.style.display = 'block';
+            reportEl.innerHTML = '<h4>Avviksanalyse</h4><div>Ingen åpenbare avvik funnet.</div>';
+            return;
+          }
+          const itemsHtml = reportItems
+            .sort((a,b) => b.distanceKm - a.distanceKm)
+            .slice(0, 200)
+            .map(it => `<li>
+              <div><strong>${it.parkName}</strong> – polygon #${it.featureId}</div>
+              <div class="small">Avstand: ${it.distanceKm.toFixed(1)} km • Areal: ${it.areaKm2.toFixed(2)} km²</div>
+              <div class="small" style="display:flex; gap:10px;">
+                <a href="#" data-zoom="${it.featureId}">Zoom til polygon</a>
+                <a href="#" data-delete="${it.featureId}">Slett polygon</a>
+              </div>
+            </li>`).join('');
+          reportEl.innerHTML = `<h4>Avviksanalyse</h4><ul>${itemsHtml}</ul>`;
+          reportEl.style.display = 'block';
+
+          // Klikk for zoom / slett
+          reportEl.querySelectorAll('a[data-zoom]').forEach(a => {
+            a.addEventListener('click', (e) => {
+              e.preventDefault();
+              const id = Number(a.getAttribute('data-zoom'));
+              const layer = layersById.get(id);
+              if (layer) {
+                try {
+                  const bounds = layer.getBounds();
+                  // Zoom litt tettere inn enn bounds for å se nærliggende polygoner
+                  const padded = bounds.pad(-0.4); // negativ pad for å zoome tettere
+                  map.fitBounds(padded, { animate: true });
+                } catch (_) {}
+              }
+            });
+          });
+          reportEl.querySelectorAll('a[data-delete]').forEach(a => {
+            a.addEventListener('click', (e) => {
+              e.preventDefault();
+              const id = Number(a.getAttribute('data-delete'));
+              updateFeatureStatus(id, 'deleted');
+              // Fjern element fra rapportlisten visuelt
+              const li = a.closest('li');
+              if (li) li.remove();
+            });
+          });
+        }
+        document.getElementById('analyzeOutliers').addEventListener('click', analyzeOutliers);
+
+        // Legg til Østmarka nasjonalpark fra Naturbase (henter GeoJSON via WMS/WFS proxy hvis tilgjengelig)
+        // Legg inn Østmarka automatisk sammen med andre nasjonalparker
+        async function addOstmarkaAutomatically() {
+          const name = 'Østmarka nasjonalpark';
+          const code = 'OSTMARKA';
+          const restBase = 'https://wms.miljodirektoratet.no/arcgis/rest/services/naturvern/MapServer';
+          const layerCandidates = [0,1,2,3];
+          const fieldCandidates = ['id','objid','kode','verneid'];
+
+          function toGeoFeatures(esri) {
+            if (!esri) return [];
+            if (esri.type === 'Feature' && esri.geometry) return [esri];
+            if (Array.isArray(esri.features)) {
+              // ArcGIS f=geojson gir gj.features;
+              if (esri.features.length && esri.features[0] && esri.features[0].type === 'Feature') return esri.features;
+              // ArcGIS f=json (Esri JSON)
+              return esri.features.map(fe => {
+                const g = fe.geometry;
+                if (!g) return null;
+                if (g.rings) {
+                  return {
+                    type: 'Feature',
+                    properties: fe.attributes || {},
+                    geometry: { type: 'Polygon', coordinates: g.rings }
+                  };
+                }
+                return null;
+              }).filter(Boolean);
+            }
+            return [];
+          }
+
+          async function tryArcGisQuery() {
+            for (const layer of layerCandidates) {
+              for (const field of fieldCandidates) {
+                const where = encodeURIComponent(`${field}='VV00003849'`);
+                const urls = [
+                  `${restBase}/${layer}/query?where=${where}&outFields=*&outSR=4326&f=geojson`,
+                  `${restBase}/${layer}/query?where=${where}&outFields=*&outSR=4326&f=json`,
+                ];
+                for (const u of urls) {
+                  try {
+                    const r = await fetch(u);
+                    if (!r.ok) continue;
+                    const j = await r.json();
+                    const feats = toGeoFeatures(j);
+                    if (feats && feats.length) return feats;
+                  } catch (_) { /* fortsett */ }
+                }
+              }
+            }
+            return null;
+          }
+
+          async function tryWfs() {
+            const wfs = 'https://wms.miljodirektoratet.no/arcgis/services/naturvern/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typenames=naturvern:arealvern_f&outputFormat=application/json&CQL_FILTER=id%3D%27VV00003849%27';
+            try {
+              const r = await fetch(wfs);
+              if (!r.ok) return null;
+              const j = await r.json();
+              return (j && j.features) ? j.features : null;
+            } catch (_) { return null; }
+          }
+
+          try {
+            let features = await tryArcGisQuery();
+            if (!features || !features.length) features = await tryWfs();
+            if (!features || !features.length) throw new Error('Ingen features funnet for Østmarka');
+
+            for (const f of features) {
+              if (!f || !f.geometry) continue;
+              if (f.geometry.type === 'Polygon') {
+                addFeatureToMap(f.geometry, { source: 'park', code, name, status: 'approved' });
+              } else if (f.geometry.type === 'MultiPolygon') {
+                for (const rings of f.geometry.coordinates) {
+                  addFeatureToMap({ type: 'Polygon', coordinates: rings }, { source: 'park', code, name, status: 'approved' });
+                }
+              }
+            }
+            setParkStatusByCode(code, 'approved');
+          } catch (e) {
+            console.warn('Østmarka kunne ikke legges automatisk:', e);
+          }
+        }
+
+        try {
+          // Høyoppløst Norge-omriss (WGS84) fra GitHub, lagres i state som separate polygoner
+          const resNor = await fetch('https://raw.githubusercontent.com/robhop/fylker-og-kommuner/main/Norge-L.geojson');
+          if (!resNor.ok) throw new Error('Klarte ikke å hente Norge-omriss (Norge-L.geojson)');
+          const norGeo = await resNor.json();
+          setProgress(10);
+          const addNor = (geom) => {
+            if (!geom) return;
+            if (geom.type === 'Polygon') {
+              addFeatureToMap(geom, { source: 'norway', name: 'Norge', status: 'approved' });
+            } else if (geom.type === 'MultiPolygon') {
+              for (const rings of geom.coordinates) {
+                addFeatureToMap({ type: 'Polygon', coordinates: rings }, { source: 'norway', name: 'Norge', status: 'approved' });
+              }
+            }
+          };
+          if (norGeo.type === 'FeatureCollection') {
+            for (const f of norGeo.features) addNor(f.geometry);
+          } else if (norGeo.type === 'Feature') {
+            addNor(norGeo.geometry);
+          } else {
+            addNor(norGeo);
+          }
+          setProgress(20);
+          saveDataset();
+        } catch (e) {
+          console.error(e);
+          // Selv om Norge feiler, sett progress slik at viewer ikke henger
+          setProgress(10);
+          saveDataset();
+        }
+
+        // Hent metadata (navn) og nasjonalparker (WGS84) og legg hver polygon i state
+        try {
+          const [metaRes, parksRes] = await Promise.all([
+            fetch('https://data.artsdatabanken.no/Naturvernomr%C3%A5de/Nasjonalpark/metadata.json'),
+            fetch('https://data.artsdatabanken.no/Naturvernomr%C3%A5de/Nasjonalpark/polygon.4326.geojson'),
+          ]);
+          if (!metaRes.ok) throw new Error('Klarte ikke å hente metadata for nasjonalparker');
+          if (!parksRes.ok) throw new Error('Klarte ikke å hente nasjonalparker');
+
+          const meta = await metaRes.json();
+          const parksGeo = await parksRes.json();
+          setProgress(40);
+
+          const nameMap = {};
+          if (meta && Array.isArray(meta.barn)) {
+            for (const item of meta.barn) {
+              const raw = item && item.kode; // f.eks. "VV-108"
+              const nb = item && item.tittel && item.tittel.nb;
+              if (raw && nb) {
+                const code = String(raw).replace(/^VV-/, '');
+                nameMap[code] = nb;
+              }
+            }
+          }
+
+          for (const f of parksGeo.features) {
+            const code = f && f.properties && f.properties.kode ? String(f.properties.kode) : undefined;
+            if (code === '6') continue; // Fjern Øvre Anarjokka
+            const name = (code && nameMap[code]) || (code ? `Nasjonalpark ${code}` : 'Nasjonalpark');
+            if (!f.geometry) continue;
+            if (f.geometry.type === 'Polygon') {
+              addFeatureToMap(f.geometry, { source: 'park', code, name, status: 'pending' });
+            } else if (f.geometry.type === 'MultiPolygon') {
+              for (const rings of f.geometry.coordinates) {
+                addFeatureToMap({ type: 'Polygon', coordinates: rings }, { source: 'park', code, name, status: 'pending' });
+              }
+            }
+          }
+          setProgress(80);
+          // Legg til Østmarka automatisk til slutt
+          await addOstmarkaAutomatically();
+          setProgress(100);
+          saveDataset();
+        } catch (e) {
+          console.error(e);
+          setProgress(100);
+          saveDataset();
+        }
+
+        // Fokuser kartet
+        if (allBounds.isValid()) {
+          map.fitBounds(allBounds.pad(0.05));
+        } else {
+          map.setView([64.5, 16], 4);
+        }
+      })();
+    </script>
+  </body>
+  </html>
+
+
