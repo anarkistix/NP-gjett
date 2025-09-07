@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.07.8",
-  "generatedAt": "2025-09-07T18:05:57Z",
-  "notes": "Spill: ved feil blir parken den samme; vis FEIL + neste hint"
+  "build": "2025.09.07.9",
+  "generatedAt": "2025-09-07T18:08:52Z",
+  "notes": "Spill: hint-stabel i retro-stil; siste hint vises øverst"
 }
 
 
