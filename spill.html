@@ -49,7 +49,7 @@
         const map = L.map('map', { zoomControl: false, preferCanvas:true });
         const norwayStyle = { color:'#111', weight:1.2, fill:false };
         const parkStyle = { color:'#0a7a62', weight:1.0, fill:true, fillColor:'#cfeee1', fillOpacity:0.35 };
-        const selectedStyle = { color:'#00ff88', weight:2, fill:true, fillColor:'#00ff88', fillOpacity:0.22 };
+        const selectedStyle = { color:'#00ff88', weight:2, fill:true, fillColor:'#0a7a62', fillOpacity:0.5 };
         const norwayLayer = L.geoJSON(null, { style: norwayStyle }).addTo(map);
         const parksLayer = L.geoJSON(null, { style: parkStyle }).addTo(map);
         const focusLayer = L.geoJSON(null, { style: selectedStyle }).addTo(map);

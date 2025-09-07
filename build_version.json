@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.07.5",
-  "generatedAt": "2025-09-07T17:59:21Z",
-  "notes": "Spill: valgt park i neon-grønn (#00ff88) for samsvar med UI"
+  "build": "2025.09.07.6",
+  "generatedAt": "2025-09-07T18:01:22Z",
+  "notes": "Spill: behold lys grønn outline, mørk grønn fyll på valgt park"
 }
 
 
