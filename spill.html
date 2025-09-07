@@ -28,6 +28,8 @@
       .winContent .btn { margin-top:12px; font-size:16px; }
       #correctOverlay { position:absolute; inset:0; z-index:1100; display:none; align-items:center; justify-content:center; pointer-events:none; }
       #correctOverlay .msg { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:16px 20px; font: bold 36px monospace; letter-spacing:2px; text-shadow:0 0 6px #00ff88; }
+      #wrongOverlay { position:absolute; inset:0; z-index:1100; display:none; align-items:center; justify-content:center; pointer-events:none; }
+      #wrongOverlay .msg { background:#111; color:#ff6b6b; border:2px solid #ff6b6b; border-radius:10px; padding:16px 20px; font: bold 36px monospace; letter-spacing:2px; text-shadow:0 0 6px #ff6b6b; }
     </style>
   </head>
   <body>
@@ -41,6 +43,7 @@
     <div id="guessBar"><div id="choices"></div></div>
     <div id="winOverlay"><div class="winContent"><div>VINNER</div><button id="startNytt" class="btn">Start på nytt</button></div></div>
     <div id="correctOverlay"><div class="msg">KORREKT</div></div>
+    <div id="wrongOverlay"><div class="msg">FEIL</div></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js" crossorigin="anonymous"></script>
@@ -58,6 +61,7 @@
         const winOverlay = document.getElementById('winOverlay');
         const startNyttBtn = document.getElementById('startNytt');
         const correctOverlay = document.getElementById('correctOverlay');
+        const wrongOverlay = document.getElementById('wrongOverlay');
         const timerEl = document.getElementById('timer');
 
         // Build badge
@@ -158,8 +162,12 @@
               } else {
                 btn.classList.add('wrong');
                 btn.disabled = true; btn.classList.add('disabled');
-                // Neste hint ved feil
-                if (hintIndex < currentHints.length-1) { hintIndex += 1; showHint(hintIndex); }
+                if (wrongOverlay) {
+                  wrongOverlay.style.display = 'flex';
+                  setTimeout(()=>{ wrongOverlay.style.display = 'none'; startRound(); }, 1000);
+                } else {
+                  setTimeout(()=>{ startRound(); }, 1000);
+                }
               }
             });
           });
@@ -216,6 +224,7 @@
           hintEl.style.display = 'none'; hintEl.textContent = '';
           if (winOverlay) winOverlay.style.display = 'none';
           if (correctOverlay) correctOverlay.style.display = 'none';
+          if (wrongOverlay) wrongOverlay.style.display = 'none';
           const park = pickRandomPark();
           if (!park) return;
           current = park;

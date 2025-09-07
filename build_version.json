@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.07.6",
-  "generatedAt": "2025-09-07T18:01:22Z",
-  "notes": "Spill: behold lys grønn outline, mørk grønn fyll på valgt park"
+  "build": "2025.09.07.7",
+  "generatedAt": "2025-09-07T18:04:17Z",
+  "notes": "Spill: FEIL-overlay 1s ved feil svar, automatisk ny runde"
 }
 
 
