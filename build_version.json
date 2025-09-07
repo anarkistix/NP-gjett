@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.07.17",
-  "generatedAt": "2025-09-07T19:04:03Z",
-  "notes": "Spill: hi-score topp 10 med navn/score, dummy seed og innskriving"
+  "build": "2025.09.07.18",
+  "generatedAt": "2025-09-07T19:09:00Z",
+  "notes": "Spill: autosave hi-score ved restart og vis hi-score på splash"
 }
 
 
