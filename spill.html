@@ -176,7 +176,7 @@
           const container = document.getElementById('choices');
           if (!current || !container) return;
           const correctKey = current.properties.key;
-          const opts = [current, ...pickOtherParks(correctKey, 4)].slice(0,5);
+          const opts = [current, ...pickOtherParks(correctKey, 5)].slice(0,6);
           const shuffled = shuffle(opts.slice());
           container.innerHTML = shuffled.map(p => `<button class="choiceBtn" data-key="${p.properties.key}">${labelForPark(p.properties)}</button>`).join('');
           container.querySelectorAll('.choiceBtn').forEach(btn => {
