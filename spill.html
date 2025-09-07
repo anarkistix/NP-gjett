@@ -164,9 +164,12 @@
                 btn.disabled = true; btn.classList.add('disabled');
                 if (wrongOverlay) {
                   wrongOverlay.style.display = 'flex';
-                  setTimeout(()=>{ wrongOverlay.style.display = 'none'; startRound(); }, 1000);
+                  setTimeout(()=>{
+                    wrongOverlay.style.display = 'none';
+                    if (hintIndex < currentHints.length-1) { hintIndex += 1; showHint(hintIndex); }
+                  }, 1000);
                 } else {
-                  setTimeout(()=>{ startRound(); }, 1000);
+                  if (hintIndex < currentHints.length-1) { hintIndex += 1; showHint(hintIndex); }
                 }
               }
             });
