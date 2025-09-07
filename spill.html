@@ -33,6 +33,12 @@
       #correctOverlay .msg .sub { margin-top:8px; font: bold 18px monospace; letter-spacing:1px; }
       #wrongOverlay { position:absolute; inset:0; z-index:1100; display:none; align-items:center; justify-content:center; pointer-events:none; }
       #wrongOverlay .msg { background:#111; color:#ff6b6b; border:2px solid #ff6b6b; border-radius:10px; padding:16px 20px; font: bold 36px monospace; letter-spacing:2px; text-shadow:0 0 6px #ff6b6b; }
+      #splashOverlay { position:absolute; inset:0; z-index:1200; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); }
+      .splashBox { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:18px 20px; width:min(520px, 90vw); box-shadow:0 0 12px rgba(0,0,0,0.5); }
+      .splashTitle { font: bold 20px monospace; letter-spacing:1px; text-shadow:0 0 6px #00ff88; text-align:center; margin-bottom:10px; }
+      .splashText { font: bold 14px monospace; letter-spacing:1px; text-shadow:0 0 4px #00ff88; margin-bottom:10px; }
+      .splashList { margin:0 0 12px 18px; padding:0; }
+      .splashList li { margin:6px 0; font: 13px monospace; }
     </style>
   </head>
   <body>
@@ -47,6 +53,20 @@
     <div id="winOverlay"><div class="winContent"><div>VINNER</div><button id="startNytt" class="btn">Start på nytt</button></div></div>
     <div id="correctOverlay"><div class="msg">KORREKT</div></div>
     <div id="wrongOverlay"><div class="msg">FEIL</div></div>
+    <div id="splashOverlay">
+      <div class="splashBox">
+        <div class="splashTitle">Det Store Nasjonalparkspillet</div>
+        <div class="splashText">Hvor mange nasjonalparker klarer du å gjette på to minutter?</div>
+        <ul class="splashList">
+          <li>Du får poeng ut fra hvor mange forsøk du bruker.</li>
+          <li>Du får et nytt hint om parken for hvert forsøk du bruker.</li>
+          <li>Når du har gjettet riktig går vi videre til neste park.</li>
+        </ul>
+        <div style="display:flex; justify-content:center;">
+          <button id="startGameBtn" class="choiceBtn">START NYTT SPILL</button>
+        </div>
+      </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js" crossorigin="anonymous"></script>
@@ -66,6 +86,8 @@
         const correctOverlay = document.getElementById('correctOverlay');
         const wrongOverlay = document.getElementById('wrongOverlay');
         const timerEl = document.getElementById('timer');
+        const splashOverlay = document.getElementById('splashOverlay');
+        const startGameBtn = document.getElementById('startGameBtn');
 
         // Build badge
         try {
@@ -246,6 +268,7 @@
           if (winOverlay) winOverlay.style.display = 'none';
           if (correctOverlay) correctOverlay.style.display = 'none';
           if (wrongOverlay) wrongOverlay.style.display = 'none';
+          if (splashOverlay) splashOverlay.style.display = 'none';
           const park = pickRandomPark();
           if (!park) return;
           current = park;
@@ -274,8 +297,14 @@
           startRound();
         });
 
-        // Start automatisk
-        startRound();
+        // Splash ved oppstart
+        function showSplash(){ if (splashOverlay) splashOverlay.style.display = 'flex'; }
+        if (startGameBtn) startGameBtn.addEventListener('click', ()=>{
+          if (splashOverlay) splashOverlay.style.display = 'none';
+          score = 1000; renderScore(); stopTimer();
+          startRound();
+        });
+        showSplash();
       })().catch(e => {
         const el = document.createElement('div');
         el.className = 'hud'; el.textContent = 'Feil: ' + (e && e.message || e);
