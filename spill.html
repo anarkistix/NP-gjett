@@ -33,6 +33,10 @@
       #correctOverlay .msg .sub { margin-top:8px; font: bold 18px monospace; letter-spacing:1px; }
       #wrongOverlay { position:absolute; inset:0; z-index:1100; display:none; align-items:center; justify-content:center; pointer-events:none; }
       #wrongOverlay .msg { background:#111; color:#ff6b6b; border:2px solid #ff6b6b; border-radius:10px; padding:16px 20px; font: bold 36px monospace; letter-spacing:2px; text-shadow:0 0 6px #ff6b6b; }
+      #endOverlay { position:absolute; inset:0; z-index:1200; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); }
+      .endBox { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:18px 22px; width:min(420px, 88vw); text-align:center; box-shadow:0 0 12px rgba(0,0,0,0.5); }
+      .endBox h2 { margin:0 0 8px 0; font: bold 22px monospace; letter-spacing:1px; text-shadow:0 0 6px #00ff88; }
+      .endScore { margin:6px 0 14px; font: bold 18px monospace; }
       #splashOverlay { position:absolute; inset:0; z-index:1200; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); }
       .splashBox { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:18px 20px; width:min(520px, 90vw); box-shadow:0 0 12px rgba(0,0,0,0.5); }
       .splashTitle { font: bold 20px monospace; letter-spacing:1px; text-shadow:0 0 6px #00ff88; text-align:center; margin-bottom:10px; }
@@ -53,6 +57,15 @@
     <div id="winOverlay"><div class="winContent"><div>VINNER</div><button id="startNytt" class="btn">Start på nytt</button></div></div>
     <div id="correctOverlay"><div class="msg">KORREKT</div></div>
     <div id="wrongOverlay"><div class="msg">FEIL</div></div>
+    <div id="endOverlay">
+      <div class="endBox">
+        <h2>Tiden er ute!</h2>
+        <div class="endScore">Din score: <span id="endScoreVal">00000</span></div>
+        <div style="display:flex; justify-content:center; gap:10px;">
+          <button id="endRestart" class="choiceBtn">START NYTT SPILL</button>
+        </div>
+      </div>
+    </div>
     <div id="splashOverlay">
       <div class="splashBox">
         <div class="splashTitle">Det Store Nasjonalparkspillet</div>
@@ -86,6 +99,9 @@
         const correctOverlay = document.getElementById('correctOverlay');
         const wrongOverlay = document.getElementById('wrongOverlay');
         const timerEl = document.getElementById('timer');
+        const endOverlay = document.getElementById('endOverlay');
+        const endScoreVal = document.getElementById('endScoreVal');
+        const endRestartBtn = document.getElementById('endRestart');
         const splashOverlay = document.getElementById('splashOverlay');
         const startGameBtn = document.getElementById('startGameBtn');
 
@@ -107,17 +123,22 @@
         const db = await dbRes.json();
         const hintsData = hintsRes.ok ? await hintsRes.json() : { parks: {} };
         // Score (retro)
-        let score = 1000;
+        let score = 0;
         function renderScore(){
           try { scoreEl.textContent = 'SCORE ' + String(Math.max(0, Math.floor(score))).padStart(5, '0'); } catch {}
         }
         renderScore();
-        // Timer
-        let timerHandle = null; let timerStartMs = 0;
-        function formatTime(ms){ const t=Math.floor(ms/1000); const mm=String(Math.floor(t/60)).padStart(2,'0'); const ss=String(t%60).padStart(2,'0'); return mm+':'+ss; }
-        function resetTimer(){ timerStartMs = Date.now(); if (timerEl) timerEl.textContent = 'TIME 00:00'; }
-        function startTimer(){ stopTimer(); resetTimer(); timerHandle = setInterval(()=>{ const e=Date.now()-timerStartMs; if (timerEl) timerEl.textContent='TIME '+formatTime(e); }, 1000); }
-        function stopTimer(){ if (timerHandle) { clearInterval(timerHandle); timerHandle = null; } }
+        // Timer (nedtelling 2:00)
+        let countdownHandle = null; let countdownEndAtMs = 0; let gameOver = false;
+        function formatTime(ms){ const t=Math.max(0, Math.floor(ms/1000)); const mm=String(Math.floor(t/60)).padStart(2,'0'); const ss=String(t%60).padStart(2,'0'); return mm+':'+ss; }
+        function updateCountdown(){
+          const remain = countdownEndAtMs - Date.now();
+          if (timerEl) timerEl.textContent = 'TIME ' + formatTime(remain);
+          if (remain <= 0){ stopCountdown(); endGame(); }
+        }
+        function startCountdown(totalMs){ stopCountdown(); countdownEndAtMs = Date.now() + totalMs; updateCountdown(); countdownHandle = setInterval(updateCountdown, 250); }
+        function stopCountdown(){ if (countdownHandle) { clearInterval(countdownHandle); countdownHandle = null; } }
+        function endGame(){ if (gameOver) return; gameOver = true; if (endScoreVal) endScoreVal.textContent = String(Math.max(0, Math.floor(score))).padStart(5,'0'); if (endOverlay) endOverlay.style.display = 'flex'; }
 
         norwayLayer.addData(outline);
         try { map.fitBounds(norwayLayer.getBounds().pad(0.05)); } catch { map.setView([64.5, 16], 4); }
@@ -172,6 +193,7 @@
           }
           return out;
         }
+        let wrongAttemptsInRound = 0;
         function renderChoicesForCurrent(){
           const container = document.getElementById('choices');
           if (!current || !container) return;
@@ -181,10 +203,13 @@
           container.innerHTML = shuffled.map(p => `<button class="choiceBtn" data-key="${p.properties.key}">${labelForPark(p.properties)}</button>`).join('');
           container.querySelectorAll('.choiceBtn').forEach(btn => {
             btn.addEventListener('click', ()=>{
+              if (gameOver) return;
               const k = btn.getAttribute('data-key');
               if (k === correctKey){
                 btn.classList.add('correct');
-                stopTimer();
+                // Beregn poeng: 60 minus 10 per feilforsøk, min 10
+                const gained = Math.max(10, 60 - 10*wrongAttemptsInRound);
+                score += gained; renderScore();
                 if (correctOverlay) {
                   const name = cleanParkName(current && current.properties && current.properties.name || '');
                   const box = correctOverlay.querySelector('.msg');
@@ -197,6 +222,7 @@
               } else {
                 btn.classList.add('wrong');
                 btn.disabled = true; btn.classList.add('disabled');
+                wrongAttemptsInRound += 1;
                 if (wrongOverlay) {
                   wrongOverlay.style.display = 'flex';
                   setTimeout(()=>{
@@ -269,13 +295,14 @@
           if (correctOverlay) correctOverlay.style.display = 'none';
           if (wrongOverlay) wrongOverlay.style.display = 'none';
           if (splashOverlay) splashOverlay.style.display = 'none';
+          wrongAttemptsInRound = 0;
           const park = pickRandomPark();
           if (!park) return;
           current = park;
           currentHints = getHintsFor(park.properties) || [];
           hintIndex = 0;
           focusLayer.addData(park);
-          startTimer();
+          // Ikke start ny timer her – nedtellingen gjelder hele spillet
           // Zoom så parken tar ca 50% av høyden: bruk padding rundt bounds
           try {
             const b = focusLayer.getBounds();
@@ -301,8 +328,14 @@
         function showSplash(){ if (splashOverlay) splashOverlay.style.display = 'flex'; }
         if (startGameBtn) startGameBtn.addEventListener('click', ()=>{
           if (splashOverlay) splashOverlay.style.display = 'none';
-          score = 1000; renderScore(); stopTimer();
+          if (endOverlay) endOverlay.style.display = 'none';
+          score = 0; renderScore(); gameOver = false;
+          startCountdown(120000);
           startRound();
+        });
+        if (endRestartBtn) endRestartBtn.addEventListener('click', ()=>{
+          if (endOverlay) endOverlay.style.display = 'none';
+          showSplash();
         });
         showSplash();
       })().catch(e => {
