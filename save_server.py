@@ -8,6 +8,7 @@ from urllib.parse import urlparse, parse_qs
 ROOT = Path('/Users/mariusarnesen/NP-gjett')
 DB_FILE = ROOT / 'np_database.json'
 HINTS_FILE = ROOT / 'park_hints.json'
+HS_FILE = ROOT / 'highscores.json'
 
 def load_db():
     return json.loads(DB_FILE.read_text(encoding='utf-8'))
@@ -68,6 +69,38 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 # sørg for at alle features har id
                 if ensure_ids(obj):
                     save_db(obj)
+            except Exception:
+                self.send_response(500); self.end_headers(); self.wfile.write(b'{}'); return
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(obj, ensure_ascii=False).encode('utf-8'))
+            return
+        if parsed.path == '/highscores':
+            # Returner global topp-10 highscore-liste
+            try:
+                if not HS_FILE.exists():
+                    # seed med dummydatasett
+                    seed = {
+                        'list': [
+                            { 'name': 'Glitre', 'score': 120 },
+                            { 'name': 'Fjellrev', 'score': 110 },
+                            { 'name': 'Nordlys', 'score': 100 },
+                            { 'name': 'Isbre', 'score': 95 },
+                            { 'name': 'Furu', 'score': 90 },
+                            { 'name': 'Elg', 'score': 80 },
+                            { 'name': 'Hauk', 'score': 70 },
+                            { 'name': 'Aurora', 'score': 60 },
+                            { 'name': 'Bølge', 'score': 50 },
+                            { 'name': 'Gran', 'score': 40 },
+                        ]
+                    }
+                    HS_FILE.write_text(json.dumps(seed, ensure_ascii=False, indent=2), encoding='utf-8')
+                obj = json.loads(HS_FILE.read_text(encoding='utf-8'))
+                lst = obj.get('list') or []
+                # sørg for sortering og maks 10
+                lst = sorted(lst, key=lambda r: (-int(r.get('score') or 0), str(r.get('name') or '')) )[:10]
+                obj['list'] = lst
             except Exception:
                 self.send_response(500); self.end_headers(); self.wfile.write(b'{}'); return
             self.send_response(200)
@@ -187,6 +220,29 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             except Exception:
                 self.send_response(500); self.end_headers(); self.wfile.write(b'Write failed'); return
             self.send_response(200); self.send_header('Content-Type','application/json'); self.end_headers(); self.wfile.write(b'{"ok":true}')
+            return
+
+        # highscores: legg til score
+        if parsed.path == '/highscores':
+            # body: { name: str, score: int }
+            try:
+                name = str(body.get('name') or '').strip() or 'Uten navn'
+                score = int(body.get('score') or 0)
+                if score < 0: score = 0
+                if not HS_FILE.exists():
+                    HS_FILE.write_text(json.dumps({ 'list': [] }, ensure_ascii=False, indent=2), encoding='utf-8')
+                obj = json.loads(HS_FILE.read_text(encoding='utf-8'))
+                lst = obj.get('list') or []
+                lst.append({ 'name': name[:24], 'score': score })
+                lst = sorted(lst, key=lambda r: (-int(r.get('score') or 0), str(r.get('name') or '')) )[:10]
+                obj['list'] = lst
+                HS_FILE.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding='utf-8')
+            except Exception:
+                self.send_response(500); self.end_headers(); self.wfile.write(b'Write failed'); return
+            self.send_response(200)
+            self.send_header('Content-Type','application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({ 'ok': True, 'list': obj.get('list') }, ensure_ascii=False).encode('utf-8'))
             return
 
         # targeted ops: update, delete, move

@@ -161,57 +161,41 @@
         function startCountdown(totalMs){ stopCountdown(); countdownEndAtMs = Date.now() + totalMs; updateCountdown(); countdownHandle = setInterval(updateCountdown, 250); }
         function stopCountdown(){ if (countdownHandle) { clearInterval(countdownHandle); countdownHandle = null; } }
         let highscoreSaved = false; let lastFinalScore = 0;
-        function endGame(){
+        async function endGame(){
           if (gameOver) return; gameOver = true;
           const sc = Math.max(0, Math.floor(score));
           lastFinalScore = sc; highscoreSaved = false;
           if (endScoreVal) endScoreVal.textContent = String(sc).padStart(5,'0');
-          seedHighscores();
-          renderHighscores();
+          await seedHighscores();
+          await renderHighscores();
           // Vurder innskriving
-          const canEnter = qualifiesForHighscore(sc);
+          const canEnter = await qualifiesForHighscore(sc);
           if (hsEntryEl) hsEntryEl.style.display = canEnter ? 'block' : 'none';
           if (endOverlay) endOverlay.style.display = 'flex';
           if (canEnter && hsNameEl) { hsNameEl.value=''; setTimeout(()=>hsNameEl.focus(), 50); }
         }
 
         // Highscores
-        const HS_KEY = 'np_gjett_highscores_v1';
-        function loadHighscores(){
-          try { const arr = JSON.parse(localStorage.getItem(HS_KEY)||'[]'); if (Array.isArray(arr)) return arr; } catch {}
-          return [];
+        async function fetchHighscores(){
+          try { const r = await fetch('http://127.0.0.1:8777/highscores'); if (!r.ok) throw 0; const j = await r.json(); return Array.isArray(j.list)? j.list: []; } catch { return []; }
         }
-        function saveHighscores(list){
-          try { localStorage.setItem(HS_KEY, JSON.stringify(list)); } catch {}
+        async function postHighscore(name, sc){
+          try { await fetch('http://127.0.0.1:8777/highscores', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name, score: sc }) }); } catch {}
         }
-        function seedHighscores(){
-          let hs = loadHighscores();
-          if (hs.length) return;
-          const names = ['Glitre','Fjellrev','Nordlys','Isbre','Furu','Elg','Hauk','Aurora','Bølge','Gran'];
-          const scores = [120,110,100,95,90,80,70,60,50,40];
-          hs = names.map((n,i)=>({ name:n, score:scores[i]||40 }));
-          saveHighscores(hs);
-        }
-        function renderHighscores(targetEl){
-          const hs = loadHighscores().slice(0,10);
+        async function seedHighscores(){ await fetchHighscores(); }
+        async function renderHighscores(targetEl){
+          const hs = (await fetchHighscores()).slice(0,10);
           const html = hs.map((r,i)=>`<div class="hsRow"><div class="hsIdx">${String(i+1).padStart(2,'0')}</div><div class="hsName">${(r.name||'–').toString().slice(0,24)}</div><div class="hsScore">${String(r.score).padStart(5,'0')}</div></div>`).join('');
           const el = targetEl || hsListEl;
           if (el) el.innerHTML = html;
         }
-        function qualifiesForHighscore(sc){
-          const hs = loadHighscores();
+        async function qualifiesForHighscore(sc){
+          const hs = await fetchHighscores();
           if (hs.length < 10) return true;
           const min = hs[hs.length-1] && Number(hs[hs.length-1].score)||0;
           return sc > min;
         }
-        function addHighscore(name, sc){
-          const hs = loadHighscores();
-          hs.push({ name: (name||'Uten navn').toString().trim().slice(0,24) || 'Uten navn', score: Number(sc)||0 });
-          hs.sort((a,b)=> (b.score - a.score) || a.name.localeCompare(b.name,'no'));
-          const top = hs.slice(0,10);
-          saveHighscores(top);
-          renderHighscores();
-        }
+        async function addHighscore(name, sc){ await postHighscore((name||'Uten navn').toString().trim().slice(0,24)||'Uten navn', Number(sc)||0); await renderHighscores(); }
 
         norwayLayer.addData(outline);
         try { map.fitBounds(norwayLayer.getBounds().pad(0.05)); } catch { map.setView([64.5, 16], 4); }
@@ -406,22 +390,22 @@
           startCountdown(120000);
           startRound();
         });
-        if (endRestartBtn) endRestartBtn.addEventListener('click', ()=>{
+        if (endRestartBtn) endRestartBtn.addEventListener('click', async ()=>{
           // Autosave hvis kvalifiserer og ikke allerede lagret
           const sc = Math.max(0, Math.floor(score));
-          if (qualifiesForHighscore(sc) && !highscoreSaved){
+          if ((await qualifiesForHighscore(sc)) && !highscoreSaved){
             const name = (hsNameEl && hsNameEl.value) || '';
-            addHighscore(name, sc);
+            await addHighscore(name, sc);
             highscoreSaved = true;
             if (hsEntryEl) hsEntryEl.style.display = 'none';
           }
           if (endOverlay) endOverlay.style.display = 'none';
           showSplash();
         });
-        if (hsSaveBtn) hsSaveBtn.addEventListener('click', ()=>{
+        if (hsSaveBtn) hsSaveBtn.addEventListener('click', async ()=>{
           const sc = Math.max(0, Math.floor(score));
           const name = (hsNameEl && hsNameEl.value) || '';
-          addHighscore(name, sc);
+          await addHighscore(name, sc);
           highscoreSaved = true;
           if (hsEntryEl) hsEntryEl.style.display = 'none';
         });
