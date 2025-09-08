@@ -9,7 +9,7 @@ from urllib.parse import urlparse, parse_qs
 ROOT = Path(__file__).resolve().parent
 DB_FILE = ROOT / 'np_database.json'
 HINTS_FILE = ROOT / 'park_hints.json'
-# highscores fjernet
+HIGHSCORES_FILE = ROOT / 'highscores.json'
 
 def load_db():
     return json.loads(DB_FILE.read_text(encoding='utf-8'))
@@ -19,6 +19,34 @@ def save_db(obj):
     if not backup.exists():
         backup.write_text(DB_FILE.read_text(encoding='utf-8'), encoding='utf-8')
     DB_FILE.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding='utf-8')
+
+def load_highscores():
+    if not HIGHSCORES_FILE.exists():
+        # Seed med dummy data
+        seed_data = [
+            {"name": "Kartmester", "score": 1200},
+            {"name": "Norgeekspert", "score": 1100},
+            {"name": "Parkjeger", "score": 1000},
+            {"name": "Fjellvandrer", "score": 900},
+            {"name": "Naturvenn", "score": 800},
+            {"name": "Geograf", "score": 700},
+            {"name": "Turist", "score": 600},
+            {"name": "Utforsker", "score": 500},
+            {"name": "Nybegynner", "score": 400},
+            {"name": "Prøver", "score": 300}
+        ]
+        save_highscores(seed_data)
+        return seed_data
+    try:
+        return json.loads(HIGHSCORES_FILE.read_text(encoding='utf-8'))
+    except Exception:
+        return []
+
+def save_highscores(scores):
+    backup = HIGHSCORES_FILE.with_suffix('.json.bak')
+    if not backup.exists() and HIGHSCORES_FILE.exists():
+        backup.write_text(HIGHSCORES_FILE.read_text(encoding='utf-8'), encoding='utf-8')
+    HIGHSCORES_FILE.write_text(json.dumps(scores, ensure_ascii=False, indent=2), encoding='utf-8')
 
 def ensure_ids(db_obj):
     changed = False
@@ -77,7 +105,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(obj, ensure_ascii=False).encode('utf-8'))
             return
-        # /highscores fjernet
+        if parsed.path == '/highscores':
+            try:
+                scores = load_highscores()
+            except Exception:
+                self.send_response(500); self.end_headers(); self.wfile.write(b'[]'); return
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(scores, ensure_ascii=False).encode('utf-8'))
+            return
         if parsed.path == '/hints':
             try:
                 if not HINTS_FILE.exists():
@@ -192,7 +229,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200); self.send_header('Content-Type','application/json'); self.end_headers(); self.wfile.write(b'{"ok":true}')
             return
 
-        # /highscores fjernet
+        # save highscore
+        if parsed.path == '/highscores':
+            name = str(body.get('name') or '').strip()
+            score = body.get('score')
+            if not name or not isinstance(score, (int, float)) or score < 0:
+                self.send_response(400); self.end_headers(); self.wfile.write(b'Invalid name/score'); return
+            try:
+                scores = load_highscores()
+                # legg til ny score
+                scores.append({"name": name, "score": int(score)})
+                # sorter etter score (høyest først) og behold top 10
+                scores.sort(key=lambda x: x['score'], reverse=True)
+                scores = scores[:10]
+                save_highscores(scores)
+            except Exception:
+                self.send_response(500); self.end_headers(); self.wfile.write(b'Write failed'); return
+            self.send_response(200); self.send_header('Content-Type','application/json'); self.end_headers(); self.wfile.write(b'{"ok":true}')
+            return
 
         # targeted ops: update, delete, move
         try:

@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.08.2",
-  "generatedAt": "2025-09-08T08:00:40Z",
-  "notes": "API: deployet på Render (https://np-gjett-db.onrender.com), spill bruker relative URLer"
+  "build": "2025.09.08.3",
+  "generatedAt": "2025-09-08T08:43:56Z",
+  "notes": "Hi-score: lagt til global hi-score system med Render API, vises på splash og end screen"
 }
 
 

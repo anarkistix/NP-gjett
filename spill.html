@@ -37,7 +37,13 @@
       .endBox { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:18px 22px; width:min(420px, 88vw); text-align:center; box-shadow:0 0 12px rgba(0,0,0,0.5); }
       .endBox h2 { margin:0 0 8px 0; font: bold 22px monospace; letter-spacing:1px; text-shadow:0 0 3px #00ff88; }
       .endScore { margin:6px 0 14px; font: bold 18px monospace; }
-      /* hi-score stil fjernet */
+      .hsList { margin:8px 0; max-height:200px; overflow-y:auto; }
+      .hsItem { display:flex; justify-content:space-between; padding:4px 8px; margin:2px 0; background:rgba(0,255,136,0.1); border:1px solid #00ff88; border-radius:4px; font: 12px monospace; }
+      .hsName { color:#00ff88; }
+      .hsScore { color:#00ff88; font-weight:bold; }
+      .hsEntry { margin:8px 0; display:flex; gap:6px; align-items:center; }
+      .hsEntry input { flex:1; padding:6px 8px; border:1px solid #00ff88; border-radius:4px; background:#111; color:#00ff88; font: 12px monospace; }
+      .hsEntry button { padding:6px 10px; background:#00ff88; color:#111; border:none; border-radius:4px; font: 12px monospace; font-weight:bold; }
       #splashOverlay { position:absolute; inset:0; z-index:1200; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); }
       .splashBox { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:18px 20px; width:min(520px, 90vw); box-shadow:0 0 12px rgba(0,0,0,0.5); }
       .splashTitle { font: bold 20px monospace; letter-spacing:1px; text-shadow:0 0 3px #00ff88; text-align:center; margin-bottom:10px; }
@@ -83,6 +89,9 @@
           <li>Når du har gjettet riktig går vi videre til neste park.</li>
         </ul>
         
+        <div class="hsTitle" style="margin:12px 0 6px 0; font: bold 14px monospace; text-align:center;">Hi-score</div>
+        <div id="hsListSplash" class="hsList"></div>
+        
         <div style="display:flex; justify-content:center;">
           <button id="startGameBtn" class="choiceBtn">START NYTT SPILL</button>
         </div>
@@ -110,7 +119,11 @@
         const endOverlay = document.getElementById('endOverlay');
         const endScoreVal = document.getElementById('endScoreVal');
         const endRestartBtn = document.getElementById('endRestart');
-        /* hi-score elementer fjernet */
+        const hsListEl = document.getElementById('hsList');
+        const hsEntryEl = document.getElementById('hsEntry');
+        const hsNameEl = document.getElementById('hsName');
+        const hsSaveBtn = document.getElementById('hsSave');
+        const hsListSplashEl = document.getElementById('hsListSplash');
         const splashOverlay = document.getElementById('splashOverlay');
         const startGameBtn = document.getElementById('startGameBtn');
 
@@ -137,6 +150,63 @@
           try { scoreEl.textContent = 'SCORE ' + String(Math.max(0, Math.floor(score))).padStart(5, '0'); } catch {}
         }
         renderScore();
+        
+        // Hi-score system
+        let highscores = [];
+        async function loadHighscores(){
+          try {
+            const res = await fetch('https://np-gjett-db.onrender.com/highscores?ts=' + Date.now());
+            if (res.ok) {
+              highscores = await res.json();
+            }
+          } catch (e) {
+            console.warn('Kunne ikke laste hi-scores:', e);
+            highscores = [];
+          }
+        }
+        
+        async function saveHighscores(list){
+          try {
+            const res = await fetch('https://np-gjett-db.onrender.com/highscores', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(list)
+            });
+            return res.ok;
+          } catch (e) {
+            console.warn('Kunne ikke lagre hi-scores:', e);
+            return false;
+          }
+        }
+        
+        function renderHighscores(targetEl){
+          if (!targetEl) return;
+          targetEl.innerHTML = '';
+          highscores.forEach((hs, i) => {
+            const div = document.createElement('div');
+            div.className = 'hsItem';
+            div.innerHTML = `<span class="hsName">${i+1}. ${hs.name}</span><span class="hsScore">${hs.score}</span>`;
+            targetEl.appendChild(div);
+          });
+        }
+        
+        function qualifiesForHighscore(sc){
+          return highscores.length < 10 || sc > (highscores[highscores.length-1]?.score || 0);
+        }
+        
+        async function addHighscore(name, sc){
+          if (!name || sc < 0) return false;
+          highscores.push({name: name, score: sc});
+          highscores.sort((a,b) => b.score - a.score);
+          highscores = highscores.slice(0, 10);
+          const ok = await saveHighscores(highscores);
+          if (ok) {
+            renderHighscores(hsListEl);
+            renderHighscores(hsListSplashEl);
+          }
+          return ok;
+        }
+        
         // Timer (nedtelling 2:00)
         let countdownHandle = null; let countdownEndAtMs = 0; let gameOver = false;
         function formatTime(ms){ const t=Math.max(0, Math.floor(ms/1000)); const mm=String(Math.floor(t/60)).padStart(2,'0'); const ss=String(t%60).padStart(2,'0'); return mm+':'+ss; }
@@ -153,11 +223,17 @@
           const sc = Math.max(0, Math.floor(score));
           lastFinalScore = sc; highscoreSaved = false;
           if (endScoreVal) endScoreVal.textContent = String(sc).padStart(5,'0');
+          
+          // Vis hi-score entry hvis spilleren kvalifiserer
+          if (qualifiesForHighscore(sc)) {
+            if (hsEntryEl) hsEntryEl.style.display = 'flex';
+            if (hsNameEl) hsNameEl.focus();
+          } else {
+            if (hsEntryEl) hsEntryEl.style.display = 'none';
+          }
+          
           if (endOverlay) endOverlay.style.display = 'flex';
         }
-
-        // Highscores
-        /* hi-score fjernet */
 
         norwayLayer.addData(outline);
         try { map.fitBounds(norwayLayer.getBounds().pad(0.05)); } catch { map.setView([64.5, 16], 4); }
@@ -356,6 +432,29 @@
           if (endOverlay) endOverlay.style.display = 'none';
           showSplash();
         });
+        
+        // Hi-score event listeners
+        if (hsSaveBtn) hsSaveBtn.addEventListener('click', async ()=>{
+          const name = hsNameEl?.value?.trim();
+          if (name && lastFinalScore >= 0) {
+            const ok = await addHighscore(name, lastFinalScore);
+            if (ok) {
+              highscoreSaved = true;
+              if (hsEntryEl) hsEntryEl.style.display = 'none';
+            }
+          }
+        });
+        
+        if (hsNameEl) hsNameEl.addEventListener('keypress', (e)=>{
+          if (e.key === 'Enter') {
+            hsSaveBtn?.click();
+          }
+        });
+        
+        // Last hi-scores og vis splash
+        await loadHighscores();
+        renderHighscores(hsListEl);
+        renderHighscores(hsListSplashEl);
         showSplash();
       })().catch(e => {
         const el = document.createElement('div');
