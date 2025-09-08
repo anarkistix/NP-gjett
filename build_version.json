@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.08.3",
-  "generatedAt": "2025-09-08T08:43:56Z",
-  "notes": "Hi-score: lagt til global hi-score system med Render API, vises på splash og end screen"
+  "build": "2025.09.08.4",
+  "generatedAt": "2025-09-08T08:47:42Z",
+  "notes": "Hi-score: fikset dataformat kompatibilitet, systemet fungerer end-to-end lokalt"
 }
 
 

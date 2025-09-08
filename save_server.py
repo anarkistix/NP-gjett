@@ -38,7 +38,11 @@ def load_highscores():
         save_highscores(seed_data)
         return seed_data
     try:
-        return json.loads(HIGHSCORES_FILE.read_text(encoding='utf-8'))
+        data = json.loads(HIGHSCORES_FILE.read_text(encoding='utf-8'))
+        # Håndter både gammel format {"list": [...]} og ny format [...]
+        if isinstance(data, dict) and 'list' in data:
+            return data['list']
+        return data
     except Exception:
         return []
 
