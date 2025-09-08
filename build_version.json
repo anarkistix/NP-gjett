@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.08.1",
-  "generatedAt": "2025-09-08T07:46:31Z",
-  "notes": "API: klargjort for Render (0.0.0.0:$PORT), la til render.yaml"
+  "build": "2025.09.08.2",
+  "generatedAt": "2025-09-08T08:00:40Z",
+  "notes": "API: deployet på Render (https://np-gjett-db.onrender.com), spill bruker relative URLer"
 }
 
 
