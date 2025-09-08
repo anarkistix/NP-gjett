@@ -195,19 +195,6 @@
           }
         }
         
-        async function saveHighscores(list){
-          try {
-            const res = await fetch('https://np-gjett-db.onrender.com/highscores', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(list)
-            });
-            return res.ok;
-          } catch (e) {
-            console.warn('Kunne ikke lagre hi-scores:', e);
-            return false;
-          }
-        }
         
         function renderHighscores(targetEl){
           if (!targetEl) return;
@@ -226,15 +213,30 @@
         
         async function addHighscore(name, sc){
           if (!name || sc < 0) return false;
-          highscores.push({name: name, score: sc});
-          highscores.sort((a,b) => b.score - a.score);
-          highscores = highscores.slice(0, 10);
-          const ok = await saveHighscores(highscores);
-          if (ok) {
-            renderHighscores(hsListEl);
-            renderHighscores(hsListSplashEl);
+          
+          // Send bare den nye scoren til backend
+          try {
+            const res = await fetch('https://np-gjett-db.onrender.com/highscores', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({name: name, score: sc})
+            });
+            
+            if (res.ok) {
+              // Oppdater lokal liste
+              highscores.push({name: name, score: sc});
+              highscores.sort((a,b) => b.score - a.score);
+              highscores = highscores.slice(0, 10);
+              
+              // Oppdater UI
+              renderHighscores(hsListEl);
+              renderHighscores(hsListSplashEl);
+              return true;
+            }
+          } catch (e) {
+            console.warn('Kunne ikke lagre hi-score:', e);
           }
-          return ok;
+          return false;
         }
         
         // Timer (nedtelling 2:00)

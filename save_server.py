@@ -146,7 +146,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         raw = self.rfile.read(length) if length > 0 else b''
         try:
             body = json.loads(raw.decode('utf-8')) if raw else {}
-        except Exception:
+            # Sørg for at body er et dictionary
+            if not isinstance(body, dict):
+                print(f"Warning: body is not dict, got {type(body)}: {body}")
+                body = {}
+        except Exception as e:
+            print(f"JSON parse error: {e}, raw: {raw}")
             self.send_response(400); self.end_headers(); self.wfile.write(b'Invalid JSON'); return
 
         # full save
@@ -235,8 +240,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         # save highscore
         if parsed.path == '/highscores':
+            if not isinstance(body, dict):
+                print(f"Highscore body is not dict: {type(body)}: {body}")
+                self.send_response(400); self.end_headers(); self.wfile.write(b'Invalid body format'); return
             name = str(body.get('name') or '').strip()
             score = body.get('score')
+            print(f"Highscore data: name='{name}', score={score}, body={body}")
             if not name or not isinstance(score, (int, float)) or score < 0:
                 self.send_response(400); self.end_headers(); self.wfile.write(b'Invalid name/score'); return
             try:
