@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.08.7",
-  "generatedAt": "2025-09-08T09:09:45Z",
-  "notes": "UI: fjernet hi-score fra splash, lagt til gratulasjon og plassering ved topp 10 kvalifisering"
+  "build": "2025.09.08.8",
+  "generatedAt": "2025-09-08T10:03:25Z",
+  "notes": "Performance: wake-up server asynkron i bakgrunnen, spillet starter umiddelbart uten venting"
 }
 
 
