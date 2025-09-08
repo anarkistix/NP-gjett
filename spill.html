@@ -274,6 +274,8 @@
                 {"name": "Elv", "score": 50},
                 {"name": "Is", "score": 40}
               ];
+            } else {
+              console.log(`🔄 Beholder eksisterende ${highscores.length} hi-scores`);
             }
           }
         }
@@ -297,6 +299,8 @@
         async function addHighscore(name, sc){
           if (!name || sc < 0) return false;
           
+          console.log(`💾 Lagrer hi-score: ${name} med ${sc} poeng`);
+          
           // Send bare den nye scoren til backend
           try {
             const res = await fetch('https://np-gjett-db.onrender.com/highscores', {
@@ -306,15 +310,21 @@
             });
             
             if (res.ok) {
+              console.log('✅ Hi-score lagret til database');
+              
               // Last nyeste hi-scores fra databasen for å få riktig sortering
               await loadHighscores();
               
-              // Oppdater UI
+              // Oppdater alle hi-score lister
               renderHighscores(hsListEl);
+              renderHighscores(hiScoreListEl);
+              console.log(`📊 Oppdatert hi-score lister med ${highscores.length} entries`);
               return true;
+            } else {
+              console.warn('❌ Hi-score lagring feilet med status:', res.status);
             }
           } catch (e) {
-            console.warn('Kunne ikke lagre hi-score:', e);
+            console.warn('❌ Kunne ikke lagre hi-score:', e);
           }
           return false;
         }
@@ -350,8 +360,10 @@
           lastFinalScore = sc; highscoreSaved = false;
           if (endScoreVal) endScoreVal.textContent = String(sc).padStart(5,'0');
           
-          // Last nyeste hi-scores fra databasen
-          await loadHighscores();
+          // Last nyeste hi-scores fra databasen (kun hvis vi ikke har noen)
+          if (highscores.length === 0) {
+            await loadHighscores();
+          }
           renderHighscores(hsListEl);
           
           // Vis hi-score entry hvis spilleren kvalifiserer
