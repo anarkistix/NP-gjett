@@ -178,6 +178,34 @@
         // Hi-score system
         let highscores = [];
         
+        // Last hi-scores fra localStorage som backup
+        function loadHighscoresFromStorage() {
+          try {
+            const stored = localStorage.getItem('np_highscores');
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                highscores = parsed;
+                console.log(`📱 Laste ${highscores.length} hi-scores fra localStorage`);
+                return true;
+              }
+            }
+          } catch (e) {
+            console.warn('❌ Kunne ikke laste hi-scores fra localStorage:', e);
+          }
+          return false;
+        }
+        
+        // Lagre hi-scores til localStorage som backup
+        function saveHighscoresToStorage() {
+          try {
+            localStorage.setItem('np_highscores', JSON.stringify(highscores));
+            console.log(`💾 Lagret ${highscores.length} hi-scores til localStorage`);
+          } catch (e) {
+            console.warn('❌ Kunne ikke lagre hi-scores til localStorage:', e);
+          }
+        }
+        
         // Park management system
         let shuffledParks = []; // Tilfeldig sortert liste over alle parker
         let usedParkIndices = new Set(); // Indekser til parker som allerede er brukt
@@ -231,6 +259,11 @@
         }
         
         async function loadHighscores(){
+          // Først prøv å laste fra localStorage som backup
+          if (highscores.length === 0) {
+            loadHighscoresFromStorage();
+          }
+          
           try {
             // Kortere timeout for initial loading siden det skjer i bakgrunnen
             const controller = new AbortController();
@@ -244,9 +277,13 @@
             
             if (res.ok) {
               const newHighscores = await res.json();
-              if (Array.isArray(newHighscores)) {
+              if (Array.isArray(newHighscores) && newHighscores.length > 0) {
                 highscores = newHighscores;
                 console.log(`✅ Laste ${highscores.length} hi-scores fra database`);
+                // Lagre til localStorage som backup
+                saveHighscoresToStorage();
+              } else {
+                console.warn('⚠️ Database returnerte tom eller ugyldig hi-score liste');
               }
             } else {
               console.warn('⚠️ Hi-score API svarte med status:', res.status);
@@ -258,9 +295,9 @@
               console.warn('❌ Kunne ikke laste hi-scores fra database:', e.message);
             }
             
-            // Behold eksisterende hi-scores hvis loading feiler
+            // Kun bruk dummy data som siste utvei hvis vi ikke har noen data i det hele tatt
             if (highscores.length === 0) {
-              console.log('🔄 Bruker fallback hi-scores');
+              console.log('🔄 Ingen hi-scores funnet, bruker dummy data som siste utvei');
               highscores = [
                 {"name": "Test", "score": 150},
                 {"name": "Glitre", "score": 120},
@@ -273,8 +310,10 @@
                 {"name": "Elv", "score": 50},
                 {"name": "Is", "score": 40}
               ];
+              // Lagre dummy data til localStorage
+              saveHighscoresToStorage();
             } else {
-              console.log(`🔄 Beholder eksisterende ${highscores.length} hi-scores`);
+              console.log(`🔄 Beholder eksisterende ${highscores.length} hi-scores fra localStorage`);
             }
           }
         }
@@ -313,6 +352,9 @@
               
               // Last nyeste hi-scores fra databasen for å få riktig sortering
               await loadHighscores();
+              
+              // Lagre til localStorage som backup
+              saveHighscoresToStorage();
               
               // Oppdater alle hi-score lister
               renderHighscores(hsListEl);
