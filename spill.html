@@ -157,6 +157,29 @@
         // Hi-score system
         let highscores = [];
         
+        // Park management system
+        let shuffledParks = []; // Tilfeldig sortert liste over alle parker
+        let usedParkIndices = new Set(); // Indekser til parker som allerede er brukt
+        
+        // Generer tilfeldig liste over alle nasjonalparker
+        function generateShuffledParkList() {
+          if (!merged.length) return;
+          
+          // Lag en kopi av merged arrayen
+          shuffledParks = [...merged];
+          
+          // Fisher-Yates shuffle algoritme
+          for (let i = shuffledParks.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledParks[i], shuffledParks[j]] = [shuffledParks[j], shuffledParks[i]];
+          }
+          
+          // Reset brukte parker
+          usedParkIndices.clear();
+          
+          console.log(`Genererte tilfeldig liste med ${shuffledParks.length} nasjonalparker`);
+        }
+        
         // Wake up Render server (asynkron i bakgrunnen)
         async function wakeUpRender(){
           try {
@@ -313,6 +336,9 @@
           merged.push({ type:'Feature', properties:{ name: rep.name, code: rep.code, key }, geometry: geom });
         }
         parksLayer.addData({ type:'FeatureCollection', features: merged });
+        
+        // Generer tilfeldig liste over nasjonalparker
+        generateShuffledParkList();
 
         // Hjelpere for flervalg
         function cleanParkName(name){
@@ -380,9 +406,26 @@
         }
 
         function pickRandomPark() {
-          if (!merged.length) return null;
-          const idx = Math.floor(Math.random() * merged.length);
-          return merged[idx];
+          if (!shuffledParks.length) return null;
+          
+          // Finn første ubrukte park
+          for (let i = 0; i < shuffledParks.length; i++) {
+            if (!usedParkIndices.has(i)) {
+              usedParkIndices.add(i);
+              console.log(`Velger park ${i + 1}/${shuffledParks.length}: ${shuffledParks[i].name}`);
+              return shuffledParks[i];
+            }
+          }
+          
+          // Hvis alle parker er brukt, start på nytt
+          console.log('Alle parker er brukt, starter på nytt...');
+          usedParkIndices.clear();
+          if (shuffledParks.length > 0) {
+            usedParkIndices.add(0);
+            return shuffledParks[0];
+          }
+          
+          return null;
         }
 
         function getHintsFor(p) {
@@ -472,6 +515,9 @@
           if (splashOverlay) splashOverlay.style.display = 'none';
           if (endOverlay) endOverlay.style.display = 'none';
           score = 0; renderScore(); gameOver = false;
+          
+          // Generer ny tilfeldig liste over nasjonalparker
+          generateShuffledParkList();
           
           // Start spillet umiddelbart
           startCountdown(120000);
