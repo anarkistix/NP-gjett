@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.08.16",
-  "generatedAt": "2025-09-08T12:15:30Z",
-  "notes": "Fix: localStorage backup for hi-scores, forhindrer reset når Render server er i dvale"
+  "build": "2025.09.08.17",
+  "generatedAt": "2025-09-08T12:25:45Z",
+  "notes": "Feat: datakilde-indikator viser om hi-scores kommer fra database, localStorage eller dummy data"
 }
 
 

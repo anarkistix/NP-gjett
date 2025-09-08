@@ -58,6 +58,10 @@
       #hiScoreOverlay { position:absolute; inset:0; z-index:1300; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); }
       .hiScoreBox { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:20px 24px; width:min(400px, 85vw); max-height:80vh; text-align:center; box-shadow:0 0 12px rgba(0,0,0,0.5); overflow-y:auto; }
       .hiScoreTitle { font: bold 18px monospace; letter-spacing:1px; text-shadow:0 0 3px #00ff88; margin-bottom:12px; }
+      .dataSourceIndicator { font: 10px monospace; color:#888; text-align:center; margin-bottom:8px; padding:4px; background:rgba(0,0,0,0.3); border-radius:4px; }
+      .dataSourceIndicator.database { color:#00ff88; }
+      .dataSourceIndicator.localStorage { color:#ffaa00; }
+      .dataSourceIndicator.dummy { color:#ff6b6b; }
       .splashList li { margin:6px 0; font: 13px monospace; }
     </style>
   </head>
@@ -85,6 +89,7 @@
           <div class="notQualifiedText">Dessverre var ikke poengsummen din høy nok for topp 10-lista. Prøv igjen!</div>
         </div>
         <div class="hsTitle">Hi-score</div>
+        <div id="endDataSourceIndicator" class="dataSourceIndicator">Laster...</div>
         <div id="hsList" class="hsList"></div>
         <div class="hsEntry" id="hsEntry">
           <input id="hsName" type="text" placeholder="Ditt navn" maxlength="24" />
@@ -113,6 +118,7 @@
     <div id="hiScoreOverlay">
       <div class="hiScoreBox">
         <div class="hiScoreTitle">Hi-score</div>
+        <div id="dataSourceIndicator" class="dataSourceIndicator">Laster...</div>
         <div id="hiScoreList" class="hsList"></div>
         <div style="display:flex; justify-content:center;">
           <button id="closeHiScoreBtn" class="choiceBtn">LUKK</button>
@@ -150,6 +156,8 @@
         const hiScoreOverlay = document.getElementById('hiScoreOverlay');
         const hiScoreListEl = document.getElementById('hiScoreList');
         const closeHiScoreBtn = document.getElementById('closeHiScoreBtn');
+        const dataSourceIndicator = document.getElementById('dataSourceIndicator');
+        const endDataSourceIndicator = document.getElementById('endDataSourceIndicator');
 
         // Build badge
         try {
@@ -206,6 +214,40 @@
           }
         }
         
+        // Oppdater datakilde-indikator
+        function updateDataSourceIndicator(source, count = 0) {
+          const indicators = [dataSourceIndicator, endDataSourceIndicator];
+          indicators.forEach(indicator => {
+            if (!indicator) return;
+            
+            let text = '';
+            let className = 'dataSourceIndicator';
+            
+            switch (source) {
+              case 'database':
+                text = `📡 Database (${count} hi-scores)`;
+                className += ' database';
+                break;
+              case 'localStorage':
+                text = `💾 localStorage (${count} hi-scores)`;
+                className += ' localStorage';
+                break;
+              case 'dummy':
+                text = `⚠️ Dummy data (${count} hi-scores)`;
+                className += ' dummy';
+                break;
+              case 'loading':
+                text = '⏳ Laster hi-scores...';
+                break;
+              default:
+                text = '❓ Ukjent kilde';
+            }
+            
+            indicator.textContent = text;
+            indicator.className = className;
+          });
+        }
+        
         // Park management system
         let shuffledParks = []; // Tilfeldig sortert liste over alle parker
         let usedParkIndices = new Set(); // Indekser til parker som allerede er brukt
@@ -259,9 +301,13 @@
         }
         
         async function loadHighscores(){
+          updateDataSourceIndicator('loading');
+          
           // Først prøv å laste fra localStorage som backup
           if (highscores.length === 0) {
-            loadHighscoresFromStorage();
+            if (loadHighscoresFromStorage()) {
+              updateDataSourceIndicator('localStorage', highscores.length);
+            }
           }
           
           try {
@@ -282,11 +328,14 @@
                 console.log(`✅ Laste ${highscores.length} hi-scores fra database`);
                 // Lagre til localStorage som backup
                 saveHighscoresToStorage();
+                updateDataSourceIndicator('database', highscores.length);
               } else {
                 console.warn('⚠️ Database returnerte tom eller ugyldig hi-score liste');
+                updateDataSourceIndicator('localStorage', highscores.length);
               }
             } else {
               console.warn('⚠️ Hi-score API svarte med status:', res.status);
+              updateDataSourceIndicator('localStorage', highscores.length);
             }
           } catch (e) {
             if (e.name === 'AbortError') {
@@ -312,8 +361,10 @@
               ];
               // Lagre dummy data til localStorage
               saveHighscoresToStorage();
+              updateDataSourceIndicator('dummy', highscores.length);
             } else {
               console.log(`🔄 Beholder eksisterende ${highscores.length} hi-scores fra localStorage`);
+              updateDataSourceIndicator('localStorage', highscores.length);
             }
           }
         }
