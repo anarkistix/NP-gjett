@@ -216,21 +216,35 @@
         
         async function loadHighscores(){
           try {
-            const res = await fetch('https://np-gjett-db.onrender.com/highscores?ts=' + Date.now());
+            // Kortere timeout for initial loading siden det skjer i bakgrunnen
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 sekunder timeout
+            
+            const res = await fetch('https://np-gjett-db.onrender.com/highscores?ts=' + Date.now(), {
+              signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
             if (res.ok) {
               const newHighscores = await res.json();
               if (Array.isArray(newHighscores)) {
                 highscores = newHighscores;
-                console.log(`Laste ${highscores.length} hi-scores fra database`);
+                console.log(`✅ Laste ${highscores.length} hi-scores fra database`);
               }
             } else {
-              console.warn('Hi-score API svarte med status:', res.status);
+              console.warn('⚠️ Hi-score API svarte med status:', res.status);
             }
           } catch (e) {
-            console.warn('Kunne ikke laste hi-scores fra database:', e.message);
+            if (e.name === 'AbortError') {
+              console.warn('⏰ Hi-score loading timeout - server kan være i dvale');
+            } else {
+              console.warn('❌ Kunne ikke laste hi-scores fra database:', e.message);
+            }
+            
             // Behold eksisterende hi-scores hvis loading feiler
             if (highscores.length === 0) {
-              console.log('Bruker fallback hi-scores');
+              console.log('🔄 Bruker fallback hi-scores');
               highscores = [
                 {"name": "Test", "score": 150},
                 {"name": "Glitre", "score": 120},
@@ -586,12 +600,15 @@
           }
         });
         
-        // Last hi-scores og vis splash umiddelbart
-        await loadHighscores();
-        renderHighscores(hsListEl);
+        // Vis splash screen umiddelbart
         showSplash();
         
-        // Vekk opp Render server i bakgrunnen (uten å vente)
+        // Last hi-scores og vekk opp server i bakgrunnen (uten å vente)
+        (async () => {
+          await loadHighscores();
+          renderHighscores(hsListEl);
+        })().catch(e => console.warn('Hi-score loading feilet:', e));
+        
         wakeUpRender().catch(e => console.warn('Wake-up feilet:', e));
       })().catch(e => {
         const el = document.createElement('div');
