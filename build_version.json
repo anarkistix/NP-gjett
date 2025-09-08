@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.08.18",
-  "generatedAt": "2025-09-08T12:35:20Z",
-  "notes": "Fix: forhindrer overskriving av hi-score data med dummy data, viser 'Data ikke tilgjengelig' når nødvendig"
+  "build": "2025.09.08.19",
+  "generatedAt": "2025-09-08T12:45:15Z",
+  "notes": "Fix: backend aldri oppretter dummy data automatisk, forbedret logging for å spore database overskriving"
 }
 
 

@@ -1,0 +1,12 @@
+[
+  {"name": "Kartmester", "score": 1200},
+  {"name": "Norgeekspert", "score": 1100},
+  {"name": "Parkjeger", "score": 1000},
+  {"name": "Fjellvandrer", "score": 900},
+  {"name": "Naturvenn", "score": 800},
+  {"name": "Geograf", "score": 700},
+  {"name": "Turist", "score": 600},
+  {"name": "Utforsker", "score": 500},
+  {"name": "Nybegynner", "score": 400},
+  {"name": "Prøver", "score": 300}
+]

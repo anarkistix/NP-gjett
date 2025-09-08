@@ -22,28 +22,18 @@ def save_db(obj):
 
 def load_highscores():
     if not HIGHSCORES_FILE.exists():
-        # Seed med dummy data
-        seed_data = [
-            {"name": "Kartmester", "score": 1200},
-            {"name": "Norgeekspert", "score": 1100},
-            {"name": "Parkjeger", "score": 1000},
-            {"name": "Fjellvandrer", "score": 900},
-            {"name": "Naturvenn", "score": 800},
-            {"name": "Geograf", "score": 700},
-            {"name": "Turist", "score": 600},
-            {"name": "Utforsker", "score": 500},
-            {"name": "Nybegynner", "score": 400},
-            {"name": "Prøver", "score": 300}
-        ]
-        save_highscores(seed_data)
-        return seed_data
+        print(f"⚠️ HIGHSCORES FILE MISSING: {HIGHSCORES_FILE} - returning empty list")
+        # ALDRI opprett dummy data automatisk - returner tom liste
+        return []
     try:
         data = json.loads(HIGHSCORES_FILE.read_text(encoding='utf-8'))
+        print(f"✅ Loaded {len(data) if isinstance(data, list) else 'unknown'} hi-scores from file")
         # Håndter både gammel format {"list": [...]} og ny format [...]
         if isinstance(data, dict) and 'list' in data:
             return data['list']
         return data
-    except Exception:
+    except Exception as e:
+        print(f"❌ Error reading highscores file: {e}")
         return []
 
 def save_highscores(scores):
@@ -250,13 +240,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(400); self.end_headers(); self.wfile.write(b'Invalid name/score'); return
             try:
                 scores = load_highscores()
+                print(f"📊 Current hi-scores before adding: {len(scores)} entries")
                 # legg til ny score
                 scores.append({"name": name, "score": int(score)})
                 # sorter etter score (høyest først) og behold top 10
                 scores.sort(key=lambda x: x['score'], reverse=True)
                 scores = scores[:10]
+                print(f"💾 Saving {len(scores)} hi-scores to file")
                 save_highscores(scores)
-            except Exception:
+                print(f"✅ Hi-score saved successfully: {name} with {score} points")
+            except Exception as e:
+                print(f"❌ Error saving hi-score: {e}")
                 self.send_response(500); self.end_headers(); self.wfile.write(b'Write failed'); return
             self.send_response(200); self.send_header('Content-Type','application/json'); self.end_headers(); self.wfile.write(b'{"ok":true}')
             return
