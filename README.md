@@ -25,4 +25,16 @@ Deploy (GitHub Pages)
 
 Nettadresse blir `https://<bruker>.github.io/<repo>/spill.html` (og tilsvarende for andre sider).
 
+API på Render
+-------------
+
+Enkel hosting av `save_server.py` på Render:
+
+- Legg til `render.yaml` (allerede i repo)
+- Koble repoet til Render og opprett Web Service med Autodeploy
+- Render starter prosessen: `python3 save_server.py` på port `$PORT`
+- Endepunkt: `https://<din-service>.onrender.com/`
+
+Lokalt: `python3 save_server.py` (lytter på 0.0.0.0:8777)
+
 

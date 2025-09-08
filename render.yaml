@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: np-gjett-api
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: python3 save_server.py
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+    autoDeploy: true
+

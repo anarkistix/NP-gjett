@@ -2,10 +2,11 @@ import http.server
 import socketserver
 import json
 import re
+import os
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
-ROOT = Path('/Users/mariusarnesen/NP-gjett')
+ROOT = Path(__file__).resolve().parent
 DB_FILE = ROOT / 'np_database.json'
 HINTS_FILE = ROOT / 'park_hints.json'
 # highscores fjernet
@@ -276,8 +277,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(b'Not found')
 
 if __name__ == '__main__':
-    with socketserver.TCPServer(("127.0.0.1", 8777), Handler) as httpd:
-        print("Serving admin endpoints on http://127.0.0.1:8777")
+    host = os.environ.get('HOST', '0.0.0.0')
+    try:
+        port = int(os.environ.get('PORT', '8777'))
+    except Exception:
+        port = 8777
+    with socketserver.TCPServer((host, port), Handler) as httpd:
+        print(f"Serving admin endpoints on http://{host}:{port}")
         httpd.serve_forever()
 
 
