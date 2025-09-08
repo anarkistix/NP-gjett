@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.08.12",
-  "generatedAt": "2025-09-08T11:14:05Z",
-  "notes": "Fix: initial hi-score loading asynkron i bakgrunnen, splash screen vises umiddelbart"
+  "build": "2025.09.08.13",
+  "generatedAt": "2025-09-08T11:20:58Z",
+  "notes": "Feat: klikk på SCORE felt viser hi-score overlay med pause/resume av timer"
 }
 
 
