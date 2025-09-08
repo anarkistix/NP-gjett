@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.08.4",
-  "generatedAt": "2025-09-08T08:47:42Z",
-  "notes": "Hi-score: fikset dataformat kompatibilitet, systemet fungerer end-to-end lokalt"
+  "build": "2025.09.08.5",
+  "generatedAt": "2025-09-08T08:52:06Z",
+  "notes": "Render wake-up: automatisk vekking av Render server ved spillstart med loading indikator"
 }
 
 
