@@ -218,11 +218,32 @@
           try {
             const res = await fetch('https://np-gjett-db.onrender.com/highscores?ts=' + Date.now());
             if (res.ok) {
-              highscores = await res.json();
+              const newHighscores = await res.json();
+              if (Array.isArray(newHighscores)) {
+                highscores = newHighscores;
+                console.log(`Laste ${highscores.length} hi-scores fra database`);
+              }
+            } else {
+              console.warn('Hi-score API svarte med status:', res.status);
             }
           } catch (e) {
-            console.warn('Kunne ikke laste hi-scores:', e);
-            highscores = [];
+            console.warn('Kunne ikke laste hi-scores fra database:', e.message);
+            // Behold eksisterende hi-scores hvis loading feiler
+            if (highscores.length === 0) {
+              console.log('Bruker fallback hi-scores');
+              highscores = [
+                {"name": "Test", "score": 150},
+                {"name": "Glitre", "score": 120},
+                {"name": "Nordmann", "score": 110},
+                {"name": "Fjell", "score": 100},
+                {"name": "Skog", "score": 90},
+                {"name": "Hav", "score": 80},
+                {"name": "Berg", "score": 70},
+                {"name": "Dal", "score": 60},
+                {"name": "Elv", "score": 50},
+                {"name": "Is", "score": 40}
+              ];
+            }
           }
         }
         
@@ -254,10 +275,8 @@
             });
             
             if (res.ok) {
-              // Oppdater lokal liste
-              highscores.push({name: name, score: sc});
-              highscores.sort((a,b) => b.score - a.score);
-              highscores = highscores.slice(0, 10);
+              // Last nyeste hi-scores fra databasen for å få riktig sortering
+              await loadHighscores();
               
               // Oppdater UI
               renderHighscores(hsListEl);
@@ -286,7 +305,8 @@
           lastFinalScore = sc; highscoreSaved = false;
           if (endScoreVal) endScoreVal.textContent = String(sc).padStart(5,'0');
           
-          // Oppdater hi-score listen
+          // Last nyeste hi-scores fra databasen
+          await loadHighscores();
           renderHighscores(hsListEl);
           
           // Vis hi-score entry hvis spilleren kvalifiserer
