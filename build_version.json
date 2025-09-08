@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.08.9",
-  "generatedAt": "2025-09-08T10:06:40Z",
-  "notes": "Game logic: tilfeldig park-liste genereres ved spillstart, ingen repeterende parker i samme runde"
+  "build": "2025.09.08.10",
+  "generatedAt": "2025-09-08T10:32:48Z",
+  "notes": "UI: end splash screen større, hi-score liste vises for alle spillere med passende melding"
 }
 
 

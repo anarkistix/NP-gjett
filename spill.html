@@ -34,10 +34,10 @@
       #wrongOverlay { position:absolute; inset:0; z-index:1100; display:none; align-items:center; justify-content:center; pointer-events:none; }
       #wrongOverlay .msg { background:#111; color:#ff6b6b; border:2px solid #ff6b6b; border-radius:10px; padding:16px 20px; font: bold 36px monospace; letter-spacing:2px; text-shadow:0 0 3px #ff6b6b; }
       #endOverlay { position:absolute; inset:0; z-index:1200; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); }
-      .endBox { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:18px 22px; width:min(420px, 88vw); text-align:center; box-shadow:0 0 12px rgba(0,0,0,0.5); }
+      .endBox { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:20px 24px; width:min(500px, 92vw); max-height:90vh; text-align:center; box-shadow:0 0 12px rgba(0,0,0,0.5); overflow-y:auto; }
       .endBox h2 { margin:0 0 8px 0; font: bold 22px monospace; letter-spacing:1px; text-shadow:0 0 3px #00ff88; }
       .endScore { margin:6px 0 14px; font: bold 18px monospace; }
-      .hsList { margin:8px 0; max-height:200px; overflow-y:auto; }
+      .hsList { margin:8px 0; max-height:300px; overflow-y:auto; }
       .hsItem { display:flex; justify-content:space-between; padding:4px 8px; margin:2px 0; background:rgba(0,255,136,0.1); border:1px solid #00ff88; border-radius:4px; font: 12px monospace; }
       .hsName { color:#00ff88; }
       .hsScore { color:#00ff88; font-weight:bold; }
@@ -47,6 +47,8 @@
       .congratsMsg { margin:12px 0; padding:12px; background:rgba(0,255,136,0.15); border:2px solid #00ff88; border-radius:8px; text-align:center; }
       .congratsTitle { font: bold 16px monospace; color:#00ff88; margin-bottom:6px; text-shadow: 0 0 8px rgba(0,255,136,0.6); }
       .congratsText { font: 14px monospace; color:#00ff88; }
+      .notQualifiedMsg { margin:12px 0; padding:12px; background:rgba(255,107,107,0.15); border:2px solid #ff6b6b; border-radius:8px; text-align:center; }
+      .notQualifiedText { font: 14px monospace; color:#ff6b6b; }
       #splashOverlay { position:absolute; inset:0; z-index:1200; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); }
       .splashBox { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:18px 20px; width:min(520px, 90vw); box-shadow:0 0 12px rgba(0,0,0,0.5); }
       .splashTitle { font: bold 20px monospace; letter-spacing:1px; text-shadow:0 0 3px #00ff88; text-align:center; margin-bottom:10px; }
@@ -74,6 +76,9 @@
         <div id="congratsMsg" class="congratsMsg" style="display:none;">
           <div class="congratsTitle">🎉 GRATULERER! 🎉</div>
           <div class="congratsText">Du kom inn på topp 10-lista på <span id="congratsPosition">1.</span> plass!</div>
+        </div>
+        <div id="notQualifiedMsg" class="notQualifiedMsg" style="display:none;">
+          <div class="notQualifiedText">Dessverre var ikke poengsummen din høy nok for topp 10-lista. Prøv igjen!</div>
         </div>
         <div class="hsTitle">Hi-score</div>
         <div id="hsList" class="hsList"></div>
@@ -281,6 +286,9 @@
           lastFinalScore = sc; highscoreSaved = false;
           if (endScoreVal) endScoreVal.textContent = String(sc).padStart(5,'0');
           
+          // Oppdater hi-score listen
+          renderHighscores(hsListEl);
+          
           // Vis hi-score entry hvis spilleren kvalifiserer
           if (qualifiesForHighscore(sc)) {
             if (hsEntryEl) hsEntryEl.style.display = 'flex';
@@ -295,11 +303,20 @@
               congratsPosition.textContent = position + '.';
               congratsMsg.style.display = 'block';
             }
+            
+            // Skjul "ikke kvalifisert" melding
+            const notQualifiedMsg = document.getElementById('notQualifiedMsg');
+            if (notQualifiedMsg) notQualifiedMsg.style.display = 'none';
           } else {
             if (hsEntryEl) hsEntryEl.style.display = 'none';
+            
             // Skjul gratulasjon hvis ikke kvalifisert
             const congratsMsg = document.getElementById('congratsMsg');
             if (congratsMsg) congratsMsg.style.display = 'none';
+            
+            // Vis "ikke kvalifisert" melding
+            const notQualifiedMsg = document.getElementById('notQualifiedMsg');
+            if (notQualifiedMsg) notQualifiedMsg.style.display = 'block';
           }
           
           if (endOverlay) endOverlay.style.display = 'flex';
