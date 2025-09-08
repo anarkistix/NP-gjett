@@ -44,6 +44,9 @@
       .hsEntry { margin:8px 0; display:flex; gap:6px; align-items:center; }
       .hsEntry input { flex:1; padding:6px 8px; border:1px solid #00ff88; border-radius:4px; background:#111; color:#00ff88; font: 12px monospace; }
       .hsEntry button { padding:6px 10px; background:#00ff88; color:#111; border:none; border-radius:4px; font: 12px monospace; font-weight:bold; }
+      .congratsMsg { margin:12px 0; padding:12px; background:rgba(0,255,136,0.15); border:2px solid #00ff88; border-radius:8px; text-align:center; }
+      .congratsTitle { font: bold 16px monospace; color:#00ff88; margin-bottom:6px; text-shadow: 0 0 8px rgba(0,255,136,0.6); }
+      .congratsText { font: 14px monospace; color:#00ff88; }
       #splashOverlay { position:absolute; inset:0; z-index:1200; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); }
       .splashBox { background:#111; color:#00ff88; border:2px solid #00ff88; border-radius:10px; padding:18px 20px; width:min(520px, 90vw); box-shadow:0 0 12px rgba(0,0,0,0.5); }
       .splashTitle { font: bold 20px monospace; letter-spacing:1px; text-shadow:0 0 3px #00ff88; text-align:center; margin-bottom:10px; }
@@ -68,6 +71,10 @@
       <div class="endBox">
         <h2>Tiden er ute!</h2>
         <div class="endScore">Din score: <span id="endScoreVal">00000</span></div>
+        <div id="congratsMsg" class="congratsMsg" style="display:none;">
+          <div class="congratsTitle">🎉 GRATULERER! 🎉</div>
+          <div class="congratsText">Du kom inn på topp 10-lista på <span id="congratsPosition">1.</span> plass!</div>
+        </div>
         <div class="hsTitle">Hi-score</div>
         <div id="hsList" class="hsList"></div>
         <div class="hsEntry" id="hsEntry">
@@ -88,9 +95,6 @@
           <li>Du får et nytt hint om parken for hvert forsøk du bruker.</li>
           <li>Når du har gjettet riktig går vi videre til neste park.</li>
         </ul>
-        
-        <div class="hsTitle" style="margin:12px 0 6px 0; font: bold 14px monospace; text-align:center;">Hi-score</div>
-        <div id="hsListSplash" class="hsList"></div>
         
         <div style="display:flex; justify-content:center;">
           <button id="startGameBtn" class="choiceBtn">START NYTT SPILL</button>
@@ -123,7 +127,6 @@
         const hsEntryEl = document.getElementById('hsEntry');
         const hsNameEl = document.getElementById('hsName');
         const hsSaveBtn = document.getElementById('hsSave');
-        const hsListSplashEl = document.getElementById('hsListSplash');
         const splashOverlay = document.getElementById('splashOverlay');
         const startGameBtn = document.getElementById('startGameBtn');
 
@@ -230,7 +233,6 @@
               
               // Oppdater UI
               renderHighscores(hsListEl);
-              renderHighscores(hsListSplashEl);
               return true;
             }
           } catch (e) {
@@ -260,8 +262,21 @@
           if (qualifiesForHighscore(sc)) {
             if (hsEntryEl) hsEntryEl.style.display = 'flex';
             if (hsNameEl) hsNameEl.focus();
+            
+            // Vis gratulasjon med plassering
+            const congratsMsg = document.getElementById('congratsMsg');
+            const congratsPosition = document.getElementById('congratsPosition');
+            if (congratsMsg && congratsPosition) {
+              // Finn plassering (hvor mange som har høyere score)
+              const position = highscores.filter(hs => hs.score > sc).length + 1;
+              congratsPosition.textContent = position + '.';
+              congratsMsg.style.display = 'block';
+            }
           } else {
             if (hsEntryEl) hsEntryEl.style.display = 'none';
+            // Skjul gratulasjon hvis ikke kvalifisert
+            const congratsMsg = document.getElementById('congratsMsg');
+            if (congratsMsg) congratsMsg.style.display = 'none';
           }
           
           if (endOverlay) endOverlay.style.display = 'flex';
@@ -503,7 +518,6 @@
         await wakeUpRender();
         await loadHighscores();
         renderHighscores(hsListEl);
-        renderHighscores(hsListSplashEl);
         showSplash();
       })().catch(e => {
         const el = document.createElement('div');

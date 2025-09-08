@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.08.6",
-  "generatedAt": "2025-09-08T08:59:42Z",
-  "notes": "Hi-score fix: fikset JSON parsing feil og dataformat mellom frontend/backend for hi-score lagring"
+  "build": "2025.09.08.7",
+  "generatedAt": "2025-09-08T09:09:45Z",
+  "notes": "UI: fjernet hi-score fra splash, lagt til gratulasjon og plassering ved topp 10 kvalifisering"
 }
 
 
