@@ -10,4 +10,14 @@ __pycache__/
 *.log
 /tmp/
 
+# Database files
+highscores.json
+highscores.json.bak
+
+# Backup files
+*.backup.json
+*.bak.json
+*_backup.json
+*_enriched_*.json
+
 
