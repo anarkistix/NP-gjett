@@ -329,11 +329,19 @@
             if (res.ok) {
               const newHighscores = await res.json();
               if (Array.isArray(newHighscores) && newHighscores.length > 0) {
-                highscores = newHighscores;
-                console.log(`✅ Laste ${highscores.length} hi-scores fra database`);
-                // Lagre til localStorage som backup
-                saveHighscoresToStorage();
-                updateDataSourceIndicator('database', highscores.length);
+                // Sjekk om database har ekte data (ikke bare <EMPTY> oppføringer)
+                const hasRealData = newHighscores.some(score => score.name !== '<EMPTY>' && score.score > 0);
+                
+                if (hasRealData) {
+                  highscores = newHighscores;
+                  console.log(`✅ Laste ${highscores.length} hi-scores fra database`);
+                  // Lagre til localStorage som backup
+                  saveHighscoresToStorage();
+                  updateDataSourceIndicator('database', highscores.length);
+                } else {
+                  console.warn('⚠️ Database har kun <EMPTY> oppføringer, beholder lokal data');
+                  updateDataSourceIndicator('localStorage', highscores.length);
+                }
               } else {
                 console.warn('⚠️ Database returnerte tom eller ugyldig hi-score liste');
                 updateDataSourceIndicator('localStorage', highscores.length);
@@ -446,11 +454,32 @@
             if (res.ok) {
               console.log('✅ Hi-score lagret til database');
               
-              // Last nyeste hi-scores fra databasen for å få riktig sortering
-              await loadHighscores();
+              // Legg til den nye scoren lokalt først
+              const newScore = {"name": name, "score": sc};
+              highscores.push(newScore);
+              highscores.sort((a, b) => b.score - a.score);
+              highscores = highscores.slice(0, 10); // Behold top 10
               
               // Lagre til localStorage som backup
               saveHighscoresToStorage();
+              
+              // Prøv å laste fra database, men ikke overskriv hvis det feiler
+              try {
+                const dbRes = await fetch('https://np-gjett-db.onrender.com/highscores?ts=' + Date.now());
+                if (dbRes.ok) {
+                  const dbScores = await dbRes.json();
+                  if (Array.isArray(dbScores) && dbScores.length > 0 && !dbScores.every(s => s.name === '<EMPTY>')) {
+                    // Database har ekte data - bruk den
+                    highscores = dbScores;
+                    saveHighscoresToStorage();
+                    console.log('📡 Oppdatert med data fra database');
+                  } else {
+                    console.log('🔄 Database har tom/ugyldig data, beholder lokal data');
+                  }
+                }
+              } catch (e) {
+                console.log('🔄 Kunne ikke laste fra database, beholder lokal data');
+              }
               
               // Oppdater alle hi-score lister
               renderHighscores(hsListEl);

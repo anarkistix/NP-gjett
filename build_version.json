@@ -1,7 +1,7 @@
 {
-  "build": "2025.09.08.20",
-  "generatedAt": "2025-09-08T12:55:30Z",
-  "notes": "Fix: forhindrer overskriving av samme navn, alltid viser 10 plasser med <EMPTY> for tomme plasser"
+  "build": "2025.09.08.21",
+  "generatedAt": "2025-09-08T13:05:45Z",
+  "notes": "Fix: forhindrer reset av toppliste når database returnerer <EMPTY> oppføringer, bevarer lokal data"
 }
 
 
