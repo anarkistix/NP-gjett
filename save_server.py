@@ -22,19 +22,27 @@ def save_db(obj):
 
 def load_highscores():
     if not HIGHSCORES_FILE.exists():
-        print(f"⚠️ HIGHSCORES FILE MISSING: {HIGHSCORES_FILE} - returning empty list")
-        # ALDRI opprett dummy data automatisk - returner tom liste
-        return []
+        print(f"⚠️ HIGHSCORES FILE MISSING: {HIGHSCORES_FILE} - returning empty list with 10 EMPTY slots")
+        # Returner 10 tomme plasser
+        return [{"name": "<EMPTY>", "score": 0} for _ in range(10)]
     try:
         data = json.loads(HIGHSCORES_FILE.read_text(encoding='utf-8'))
         print(f"✅ Loaded {len(data) if isinstance(data, list) else 'unknown'} hi-scores from file")
         # Håndter både gammel format {"list": [...]} og ny format [...]
         if isinstance(data, dict) and 'list' in data:
-            return data['list']
-        return data
+            scores = data['list']
+        else:
+            scores = data
+        
+        # Sørg for at det alltid er 10 plasser
+        while len(scores) < 10:
+            scores.append({"name": "<EMPTY>", "score": 0})
+        
+        return scores
     except Exception as e:
         print(f"❌ Error reading highscores file: {e}")
-        return []
+        # Returner 10 tomme plasser ved feil
+        return [{"name": "<EMPTY>", "score": 0} for _ in range(10)]
 
 def save_highscores(scores):
     backup = HIGHSCORES_FILE.with_suffix('.json.bak')
@@ -241,9 +249,29 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             try:
                 scores = load_highscores()
                 print(f"📊 Current hi-scores before adding: {len(scores)} entries")
-                # legg til ny score
-                scores.append({"name": name, "score": int(score)})
-                # sorter etter score (høyest først) og behold top 10
+                
+                # Sjekk om navnet allerede eksisterer og erstatt hvis ny score er høyere
+                existing_index = None
+                for i, existing_score in enumerate(scores):
+                    if existing_score.get('name', '').lower() == name.lower():
+                        existing_index = i
+                        break
+                
+                if existing_index is not None:
+                    # Navnet eksisterer - erstatt kun hvis ny score er høyere
+                    existing_score = scores[existing_index]['score']
+                    if int(score) > existing_score:
+                        scores[existing_index] = {"name": name, "score": int(score)}
+                        print(f"🔄 Updated existing entry: {name} from {existing_score} to {score}")
+                    else:
+                        print(f"⚠️ Score {score} not higher than existing {existing_score} for {name}")
+                        self.send_response(200); self.send_header('Content-Type','application/json'); self.end_headers(); self.wfile.write(b'{"ok":true,"message":"Score not higher than existing"}'); return
+                else:
+                    # Nytt navn - legg til
+                    scores.append({"name": name, "score": int(score)})
+                    print(f"➕ Added new entry: {name} with {score} points")
+                
+                # Sorter etter score (høyest først) og behold top 10
                 scores.sort(key=lambda x: x['score'], reverse=True)
                 scores = scores[:10]
                 print(f"💾 Saving {len(scores)} hi-scores to file")

@@ -400,14 +400,34 @@
           highscores.forEach((hs, i) => {
             const div = document.createElement('div');
             div.className = 'hsItem';
-            div.innerHTML = `<span class="hsName">${i+1}. ${hs.name}</span><span class="hsScore">${hs.score}</span>`;
+            
+            // Håndter <EMPTY> oppføringer
+            if (hs.name === '<EMPTY>') {
+              div.style.color = '#666';
+              div.style.fontStyle = 'italic';
+              div.innerHTML = `<span class="hsName">${i+1}. <EMPTY></span><span class="hsScore">-</span>`;
+            } else {
+              div.innerHTML = `<span class="hsName">${i+1}. ${hs.name}</span><span class="hsScore">${hs.score}</span>`;
+            }
+            
             targetEl.appendChild(div);
           });
         }
         
         function qualifiesForHighscore(sc){
           if (highscores.length === 0) return false; // Ingen data tilgjengelig
-          return highscores.length < 10 || sc > (highscores[highscores.length-1]?.score || 0);
+          
+          // Finn den laveste scoren som ikke er <EMPTY>
+          const realScores = highscores.filter(hs => hs.name !== '<EMPTY>' && hs.score > 0);
+          
+          if (realScores.length < 10) {
+            // Det er mindre enn 10 ekte scores - spilleren kvalifiserer
+            return true;
+          }
+          
+          // Sammenlign med den laveste ekte scoren
+          const lowestScore = realScores[realScores.length - 1]?.score || 0;
+          return sc > lowestScore;
         }
         
         async function addHighscore(name, sc){
@@ -492,8 +512,9 @@
             const congratsMsg = document.getElementById('congratsMsg');
             const congratsPosition = document.getElementById('congratsPosition');
             if (congratsMsg && congratsPosition) {
-              // Finn plassering (hvor mange som har høyere score)
-              const position = highscores.filter(hs => hs.score > sc).length + 1;
+              // Finn plassering (hvor mange ekte scores som har høyere score)
+              const realScores = highscores.filter(hs => hs.name !== '<EMPTY>' && hs.score > 0);
+              const position = realScores.filter(hs => hs.score > sc).length + 1;
               congratsPosition.textContent = position + '.';
               congratsMsg.style.display = 'block';
             }
